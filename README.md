@@ -1,3 +1,27 @@
+## Beauty Up Backend Notes
+
+### Docker local test
+
+```bash
+docker compose up --build
+```
+
+### Local endpoints
+
+- API: `http://localhost:3000/api`
+- PostgreSQL: `localhost:5432`
+
+### Local database
+
+- Database: `admin_beautyup`
+- User: `postgres`
+- Password: `postgres`
+
+### Notes
+
+- Container startup runs `prisma db push` automatically for local testing.
+- Use `.env.example` as the reference for local environment variables.
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
