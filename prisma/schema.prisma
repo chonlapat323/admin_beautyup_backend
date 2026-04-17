@@ -103,6 +103,8 @@ model Category {
   description String?
   sortOrder   Int       @default(0)
   isActive    Boolean   @default(true)
+  processedBy String?   @map("processed_by")
+  processedAt DateTime? @map("processed_at")
   deletedAt   DateTime?
   products    Product[]
   createdAt   DateTime  @default(now())

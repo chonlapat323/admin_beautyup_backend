@@ -17,20 +17,5 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: admin_beautyup_backend
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PORT: 3000
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/admin_beautyup?schema=public
-    ports:
-      - "3000:3000"
-
 volumes:
   postgres_data:
