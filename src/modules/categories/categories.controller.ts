@@ -31,6 +31,12 @@ class CreateCategoryDto {
 
 class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}
 
+class UpdateCategoryStatusDto {
+  @ApiProperty({ example: false })
+  @IsBoolean()
+  isActive!: boolean;
+}
+
 @ApiTags("Categories")
 @Controller("categories")
 export class CategoriesController {
@@ -60,8 +66,14 @@ export class CategoriesController {
     return this.categoriesService.update(id, dto);
   }
 
+  @Patch(":id/status")
+  @ApiOperation({ summary: "Change category status" })
+  updateStatus(@Param("id") id: string, @Body() dto: UpdateCategoryStatusDto) {
+    return this.categoriesService.updateStatus(id, dto.isActive);
+  }
+
   @Delete(":id")
-  @ApiOperation({ summary: "Delete category" })
+  @ApiOperation({ summary: "Soft delete category" })
   remove(@Param("id") id: string) {
     return this.categoriesService.remove(id);
   }

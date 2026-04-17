@@ -1,27 +1,129 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class CategoriesService {
+  constructor(private readonly prisma: PrismaService) {}
+
   findAll() {
-    return [
-      { id: "cat_001", name: "Hair Color", slug: "hair-color", isActive: true },
-      { id: "cat_002", name: "Leave In", slug: "leave-in", isActive: true },
-    ];
+    return this.prisma.category.findMany({
+      where: {
+        deletedAt: null,
+      },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+    });
   }
 
-  create(payload: unknown) {
-    return { message: "Category created.", payload };
+  create(payload: {
+    name: string;
+    slug: string;
+    description?: string;
+    sortOrder?: number;
+    isActive?: boolean;
+  }) {
+    return this.prisma.category.create({
+      data: {
+        name: payload.name,
+        slug: payload.slug,
+        description: payload.description,
+        sortOrder: payload.sortOrder ?? 0,
+        isActive: payload.isActive ?? true,
+      },
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+    });
   }
 
-  findOne(id: string) {
-    return { id, name: "Hair Color", slug: "hair-color", isActive: true };
+  async findOne(id: string) {
+    const category = await this.prisma.category.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+    });
+
+    if (!category) {
+      throw new NotFoundException("Category not found.");
+    }
+
+    return category;
   }
 
-  update(id: string, payload: unknown) {
-    return { message: "Category updated.", id, payload };
+  async update(
+    id: string,
+    payload: {
+      name?: string;
+      slug?: string;
+      description?: string;
+      sortOrder?: number;
+      isActive?: boolean;
+    },
+  ) {
+    await this.findOne(id);
+
+    return this.prisma.category.update({
+      where: { id },
+      data: {
+        name: payload.name,
+        slug: payload.slug,
+        description: payload.description,
+        sortOrder: payload.sortOrder,
+        isActive: payload.isActive,
+      },
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+    });
   }
 
-  remove(id: string) {
-    return { message: "Category removed.", id };
+  async updateStatus(id: string, isActive: boolean) {
+    await this.findOne(id);
+
+    return this.prisma.category.update({
+      where: { id },
+      data: { isActive },
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
+    });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id);
+
+    return this.prisma.category.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        isActive: false,
+      },
+    });
   }
 }
