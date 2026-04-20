@@ -14,6 +14,8 @@ import { PrismaModule } from "./modules/prisma/prisma.module";
 import { ProductsModule } from "./modules/products/products.module";
 import { ReferralsModule } from "./modules/referrals/referrals.module";
 import { ReportsModule } from "./modules/reports/reports.module";
+import { RolesModule } from "./modules/roles/roles.module";
+import { SeederModule } from "./modules/seeder/seeder.module";
 import { SettingsModule } from "./modules/settings/settings.module";
 import { StockModule } from "./modules/stock/stock.module";
 
@@ -36,6 +38,8 @@ import { StockModule } from "./modules/stock/stock.module";
     ReferralsModule,
     SettingsModule,
     ReportsModule,
+    RolesModule,
+    SeederModule,
   ],
   controllers: [AppController],
   providers: [AppService],

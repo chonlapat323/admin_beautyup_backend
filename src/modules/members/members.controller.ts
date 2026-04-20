@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
-import { ApiOperation, ApiProperty, PartialType, ApiTags } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString } from "class-validator";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { ApiOperation, ApiProperty, ApiPropertyOptional, PartialType, ApiTags } from "@nestjs/swagger";
+import { Type } from "class-transformer";
+import { IsBoolean, IsEmail, IsInt, IsOptional, IsString } from "class-validator";
 
 import { MembersService } from "./members.service";
 
@@ -27,6 +28,36 @@ class CreateMemberDto {
 
 class UpdateMemberDto extends PartialType(CreateMemberDto) {}
 
+class UpdateMemberStatusDto {
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  isActive!: boolean;
+}
+
+class ListMembersQueryDto {
+  @ApiPropertyOptional({ example: "Pao" })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({ enum: ["all", "active", "inactive"], example: "all" })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ example: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  page?: number;
+
+  @ApiPropertyOptional({ example: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  pageSize?: number;
+}
+
 @ApiTags("Members")
 @Controller("members")
 export class MembersController {
@@ -34,8 +65,13 @@ export class MembersController {
 
   @Get()
   @ApiOperation({ summary: "List members" })
-  findAll() {
-    return this.membersService.findAll();
+  findAll(@Query() query: ListMembersQueryDto) {
+    return this.membersService.findAll({
+      search: query.search?.trim() || undefined,
+      status: (query.status as "all" | "active" | "inactive") || "all",
+      page: query.page && query.page > 0 ? query.page : 1,
+      pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 10,
+    });
   }
 
   @Post()
@@ -54,6 +90,12 @@ export class MembersController {
   @ApiOperation({ summary: "Update member" })
   update(@Param("id") id: string, @Body() dto: UpdateMemberDto) {
     return this.membersService.update(id, dto);
+  }
+
+  @Patch(":id/status")
+  @ApiOperation({ summary: "Update member status" })
+  updateStatus(@Param("id") id: string, @Body() dto: UpdateMemberStatusDto) {
+    return this.membersService.updateStatus(id, dto.isActive);
   }
 
   @Delete(":id")

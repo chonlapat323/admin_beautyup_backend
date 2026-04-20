@@ -1,19 +1,9 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-}
-
-enum AdminRole {
-  SUPER_ADMIN
-  ADMIN
 }
 
 enum ProductStatus {
@@ -29,6 +19,16 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+model Role {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  permissions Json        @default("[]")
+  isActive    Boolean     @default(true)
+  admins      AdminUser[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model Store {
@@ -48,17 +48,18 @@ model Store {
 }
 
 model AdminUser {
-  id           String      @id @default(cuid())
-  email        String      @unique
+  id           String    @id @default(cuid())
+  email        String    @unique
   passwordHash String
   firstName    String?
   lastName     String?
-  role         AdminRole
-  isActive     Boolean     @default(true)
+  roleId       String?
+  role         Role?     @relation(fields: [roleId], references: [id])
+  isActive     Boolean   @default(true)
   storeId      String?
-  store        Store?      @relation(fields: [storeId], references: [id])
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  store        Store?    @relation(fields: [storeId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model Member {
