@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
+import { join } from "path";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -12,6 +14,30 @@ type CategoryListParams = {
 @Injectable()
 export class CategoriesService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private get appUrl() {
+    return process.env.APP_URL || `http://localhost:${process.env.PORT ?? 3000}`;
+  }
+
+  private moveTempToCategory(filename: string): string | null {
+    const tempDir = join(process.cwd(), "uploads", "temp");
+    const categoryDir = join(process.cwd(), "uploads", "categories");
+    if (!existsSync(categoryDir)) mkdirSync(categoryDir, { recursive: true });
+    const src = join(tempDir, filename);
+    const dest = join(categoryDir, filename);
+    if (!existsSync(src)) return null;
+    renameSync(src, dest);
+    return `${this.appUrl}/uploads/categories/${filename}`;
+  }
+
+  private deleteCategoryImageFile(url: string): void {
+    try {
+      const filename = url.split("/").pop();
+      if (!filename) return;
+      const filePath = join(process.cwd(), "uploads", "categories", filename);
+      if (existsSync(filePath)) unlinkSync(filePath);
+    } catch { /* ignore */ }
+  }
 
   async findAll(params: CategoryListParams) {
     const where: Prisma.CategoryWhereInput = {
@@ -79,49 +105,43 @@ export class CategoriesService {
     name: string;
     slug: string;
     description?: string;
+    imageUrl?: string;
+    tempImageFile?: string;
+    requiresShadeSelection?: boolean;
     sortOrder?: number;
     isActive?: boolean;
     processedBy?: string;
   }) {
+    const imageUrl = payload.tempImageFile
+      ? (this.moveTempToCategory(payload.tempImageFile) ?? payload.imageUrl)
+      : payload.imageUrl;
+
     return this.prisma.category.create({
       data: {
         name: payload.name,
         slug: payload.slug,
         description: payload.description,
+        imageUrl,
+        requiresShadeSelection: payload.requiresShadeSelection ?? false,
         sortOrder: payload.sortOrder ?? 0,
         isActive: payload.isActive ?? true,
         processedBy: payload.processedBy ?? "system",
         processedAt: new Date(),
       },
-      include: {
-        _count: {
-          select: {
-            products: true,
-          },
-        },
-      },
+      include: { _count: { select: { products: true } } },
     });
   }
 
   async findOne(id: string) {
     const category = await this.prisma.category.findFirst({
-      where: {
-        id,
-        deletedAt: null,
-      },
+      where: { id, deletedAt: null },
       include: {
-        _count: {
-          select: {
-            products: true,
-          },
-        },
+        _count: { select: { products: true } },
+        shades: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
       },
     });
 
-    if (!category) {
-      throw new NotFoundException("Category not found.");
-    }
-
+    if (!category) throw new NotFoundException("Category not found.");
     return category;
   }
 
@@ -131,31 +151,39 @@ export class CategoriesService {
       name?: string;
       slug?: string;
       description?: string;
+      imageUrl?: string;
+      tempImageFile?: string;
+      requiresShadeSelection?: boolean;
       sortOrder?: number;
       isActive?: boolean;
       processedBy?: string;
     },
   ) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
+
+    let imageUrl = payload.imageUrl;
+    if (payload.tempImageFile) {
+      const moved = this.moveTempToCategory(payload.tempImageFile);
+      if (moved) {
+        if (existing.imageUrl) this.deleteCategoryImageFile(existing.imageUrl);
+        imageUrl = moved;
+      }
+    }
 
     return this.prisma.category.update({
       where: { id },
       data: {
-        name: payload.name,
-        slug: payload.slug,
-        description: payload.description,
-        sortOrder: payload.sortOrder,
-        isActive: payload.isActive,
+        ...(payload.name !== undefined && { name: payload.name }),
+        ...(payload.slug !== undefined && { slug: payload.slug }),
+        ...(payload.description !== undefined && { description: payload.description }),
+        ...(imageUrl !== undefined && { imageUrl }),
+        ...(payload.requiresShadeSelection !== undefined && { requiresShadeSelection: payload.requiresShadeSelection }),
+        ...(payload.sortOrder !== undefined && { sortOrder: payload.sortOrder }),
+        ...(payload.isActive !== undefined && { isActive: payload.isActive }),
         processedBy: payload.processedBy ?? "system",
         processedAt: new Date(),
       },
-      include: {
-        _count: {
-          select: {
-            products: true,
-          },
-        },
-      },
+      include: { _count: { select: { products: true } } },
     });
   }
 

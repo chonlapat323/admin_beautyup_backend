@@ -18,6 +18,7 @@ import { RolesModule } from "./modules/roles/roles.module";
 import { SeederModule } from "./modules/seeder/seeder.module";
 import { SettingsModule } from "./modules/settings/settings.module";
 import { StockModule } from "./modules/stock/stock.module";
+import { ShadesModule } from "./modules/shades/shades.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 
 @Module({
@@ -40,6 +41,7 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
     SettingsModule,
     ReportsModule,
     RolesModule,
+    ShadesModule,
     SeederModule,
     UploadsModule,
   ],

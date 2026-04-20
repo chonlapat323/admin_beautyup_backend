@@ -14,17 +14,32 @@ class CreateCategoryDto {
   @IsString()
   slug!: string;
 
-  @ApiProperty({ example: "Hair color collection", required: false })
+  @ApiPropertyOptional({ example: "Hair color collection" })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ example: 1, required: false })
+  @ApiPropertyOptional({ example: "http://localhost:3000/uploads/categories/img.jpg" })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @ApiPropertyOptional({ description: "Temp filename from /uploads/temp upload" })
+  @IsOptional()
+  @IsString()
+  tempImageFile?: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  requiresShadeSelection?: boolean;
+
+  @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @IsInt()
   sortOrder?: number;
 
-  @ApiProperty({ example: true, required: false })
+  @ApiPropertyOptional({ example: true })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
@@ -84,10 +99,7 @@ export class CategoriesController {
   @Post()
   @ApiOperation({ summary: "Create category" })
   create(@Body() dto: CreateCategoryDto, @Headers("x-processed-by") processedBy?: string) {
-    return this.categoriesService.create({
-      ...dto,
-      processedBy,
-    });
+    return this.categoriesService.create({ ...dto, processedBy });
   }
 
   @Get(":id")

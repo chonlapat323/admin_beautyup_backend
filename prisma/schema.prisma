@@ -98,18 +98,37 @@ model MemberAddress {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  name        String
-  slug        String    @unique
-  description String?
-  sortOrder   Int       @default(0)
-  isActive    Boolean   @default(true)
-  processedBy String?   @map("processed_by")
-  processedAt DateTime? @map("processed_at")
-  deletedAt   DateTime?
-  products    Product[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id                     String    @id @default(cuid())
+  name                   String
+  slug                   String    @unique
+  description            String?
+  imageUrl               String?
+  requiresShadeSelection Boolean   @default(false)
+  sortOrder              Int       @default(0)
+  isActive               Boolean   @default(true)
+  processedBy            String?   @map("processed_by")
+  processedAt            DateTime? @map("processed_at")
+  deletedAt              DateTime?
+  products               Product[]
+  shades                 Shade[]
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+}
+
+model Shade {
+  id         String   @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name       String
+  code       String
+  swatch     String
+  imageUrl   String?
+  sortOrder  Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([categoryId, code])
 }
 
 model Product {
