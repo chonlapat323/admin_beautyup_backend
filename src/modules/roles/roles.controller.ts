@@ -108,8 +108,8 @@ export class RolesController {
   @ApiOperation({ summary: "Update role" })
   update(@Param("id") id: string, @Body() dto: UpdateRoleDto) {
     return this.rolesService.update(id, {
-      name: dto.name,
-      permissions: dto.permissions as Partial<MenuPermission>[] | undefined,
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.permissions !== undefined && { permissions: dto.permissions as Partial<MenuPermission>[] }),
     });
   }
 

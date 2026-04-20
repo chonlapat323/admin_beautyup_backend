@@ -75,7 +75,10 @@ export class MembersService {
   }
 
   async findOne(id: string) {
-    const member = await this.prisma.member.findUnique({ where: { id } });
+    const member = await this.prisma.member.findUnique({
+      where: { id },
+      include: { _count: { select: { orders: true, referrals: true } } },
+    });
     if (!member) throw new NotFoundException("ไม่พบสมาชิก");
     return member;
   }
@@ -91,7 +94,11 @@ export class MembersService {
   ) {
     await this.findOne(id);
     try {
-      return await this.prisma.member.update({ where: { id }, data: payload });
+      return await this.prisma.member.update({
+        where: { id },
+        data: payload,
+        include: { _count: { select: { orders: true, referrals: true } } },
+      });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw new BadRequestException("อีเมลหรือเบอร์โทรนี้ถูกใช้งานแล้ว");
@@ -102,7 +109,11 @@ export class MembersService {
 
   async updateStatus(id: string, isActive: boolean) {
     await this.findOne(id);
-    return this.prisma.member.update({ where: { id }, data: { isActive } });
+    return this.prisma.member.update({
+      where: { id },
+      data: { isActive },
+      include: { _count: { select: { orders: true, referrals: true } } },
+    });
   }
 
   async remove(id: string) {

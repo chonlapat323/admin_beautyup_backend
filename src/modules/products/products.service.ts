@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
-import { join, extname } from "path";
+import { join } from "path";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma, ProductStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
@@ -14,6 +14,8 @@ type ProductListParams = {
 type OrderedImageItem =
   | { kind: "existing"; id: string }
   | { kind: "temp"; filename: string };
+
+const IMAGE_INCLUDE = { images: { orderBy: { sortOrder: "asc" } } } as const;
 
 @Injectable()
 export class ProductsService {
@@ -35,12 +37,25 @@ export class ProductsService {
     if (!existsSync(this.productDir)) mkdirSync(this.productDir, { recursive: true });
   }
 
-  private moveTempToProduct(filename: string): string {
+  // Returns null if temp file doesn't exist (skips creating broken DB record)
+  private moveTempToProduct(filename: string): string | null {
     this.ensureProductDir();
     const src = join(this.tempDir, filename);
     const dest = join(this.productDir, filename);
-    if (existsSync(src)) renameSync(src, dest);
+    if (!existsSync(src)) return null;
+    renameSync(src, dest);
     return `${this.appUrl}/uploads/products/${filename}`;
+  }
+
+  private deleteProductImageFile(url: string): void {
+    try {
+      const filename = url.split("/").pop();
+      if (!filename) return;
+      const filePath = join(this.productDir, filename);
+      if (existsSync(filePath)) unlinkSync(filePath);
+    } catch {
+      // ignore fs errors
+    }
   }
 
   async findAll(params: ProductListParams) {
@@ -113,11 +128,12 @@ export class ProductsService {
     });
 
     if (payload.tempFiles && payload.tempFiles.length > 0) {
-      for (let i = 0; i < payload.tempFiles.length; i++) {
-        const url = this.moveTempToProduct(payload.tempFiles[i]);
-        await this.prisma.productImage.create({
-          data: { productId: product.id, url, sortOrder: i },
-        });
+      let sortOrder = 0;
+      for (const filename of payload.tempFiles) {
+        const url = this.moveTempToProduct(filename);
+        if (!url) continue; // skip if temp file missing
+        await this.prisma.productImage.create({ data: { productId: product.id, url, sortOrder } });
+        sortOrder++;
       }
     }
 
@@ -129,7 +145,7 @@ export class ProductsService {
       where: { id },
       include: {
         category: { select: { id: true, name: true } },
-        images: { orderBy: { sortOrder: "asc" } },
+        ...IMAGE_INCLUDE,
       },
     });
 
@@ -182,35 +198,25 @@ export class ProductsService {
       ordered.filter((i): i is { kind: "existing"; id: string } => i.kind === "existing").map((i) => i.id),
     );
 
-    // Delete images no longer in the list (including file on disk)
+    // Delete images removed from the list (file + DB record)
     for (const img of existing) {
       if (!keepIds.has(img.id)) {
-        try {
-          const filename = img.url.split("/").pop();
-          if (filename) {
-            const filePath = join(this.productDir, filename);
-            if (existsSync(filePath)) unlinkSync(filePath);
-          }
-        } catch {
-          // ignore fs errors
-        }
+        this.deleteProductImageFile(img.url);
         await this.prisma.productImage.delete({ where: { id: img.id } });
       }
     }
 
-    // Apply order: update existing sortOrder + create temp records
-    for (let i = 0; i < ordered.length; i++) {
-      const item = ordered[i];
+    // Apply order: update existing sortOrder + move new temp files
+    let sortOrder = 0;
+    for (const item of ordered) {
       if (item.kind === "existing") {
-        await this.prisma.productImage.update({
-          where: { id: item.id },
-          data: { sortOrder: i },
-        });
+        await this.prisma.productImage.update({ where: { id: item.id }, data: { sortOrder } });
+        sortOrder++;
       } else {
         const url = this.moveTempToProduct(item.filename);
-        await this.prisma.productImage.create({
-          data: { productId, url, sortOrder: i },
-        });
+        if (!url) continue; // skip if temp file missing
+        await this.prisma.productImage.create({ data: { productId, url, sortOrder } });
+        sortOrder++;
       }
     }
   }
@@ -222,13 +228,19 @@ export class ProductsService {
       data: { status },
       include: {
         category: { select: { id: true, name: true } },
-        images: { orderBy: { sortOrder: "asc" }, take: 1 },
+        ...IMAGE_INCLUDE,
       },
     });
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const product = await this.findOne(id);
+
+    // Delete image files from disk before removing from DB
+    for (const img of product.images) {
+      this.deleteProductImageFile(img.url);
+    }
+
     return this.prisma.product.delete({ where: { id } });
   }
 
@@ -248,17 +260,7 @@ export class ProductsService {
   async removeImage(productId: string, imageId: string) {
     const image = await this.prisma.productImage.findFirst({ where: { id: imageId, productId } });
     if (!image) throw new NotFoundException("Image not found.");
-
-    try {
-      const filename = image.url.split("/").pop();
-      if (filename) {
-        const filePath = join(this.productDir, filename);
-        if (existsSync(filePath)) unlinkSync(filePath);
-      }
-    } catch {
-      // ignore fs errors
-    }
-
+    this.deleteProductImageFile(image.url);
     await this.prisma.productImage.delete({ where: { id: imageId } });
     return { message: "Image deleted" };
   }

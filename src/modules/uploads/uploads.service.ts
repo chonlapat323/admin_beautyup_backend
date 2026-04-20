@@ -8,6 +8,7 @@ export class UploadsService implements OnApplicationBootstrap {
 
   onApplicationBootstrap() {
     this.cleanupStaleTempFiles();
+    setInterval(() => this.cleanupStaleTempFiles(), 60 * 60 * 1000);
   }
 
   private cleanupStaleTempFiles() {

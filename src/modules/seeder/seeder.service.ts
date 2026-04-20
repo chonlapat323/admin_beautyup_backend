@@ -35,13 +35,13 @@ export class SeederService implements OnApplicationBootstrap {
 
     await this.prisma.role.upsert({
       where: { name: "ซูเปอร์แอดมิน" },
-      update: {},
+      update: { permissions: superAdminPerms },
       create: { name: "ซูเปอร์แอดมิน", permissions: superAdminPerms, isActive: true },
     });
 
     await this.prisma.role.upsert({
       where: { name: "แอดมิน" },
-      update: {},
+      update: { permissions: adminPerms },
       create: { name: "แอดมิน", permissions: adminPerms, isActive: true },
     });
   }
