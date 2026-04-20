@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: "beautyup-api",
-      script: "dist/main.js",
+      script: "dist/src/main.js",
       instances: 1,
       autorestart: true,
       watch: false,
