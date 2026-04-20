@@ -137,7 +137,11 @@ export class CategoriesService {
       where: { id, deletedAt: null },
       include: {
         _count: { select: { products: true } },
-        shades: { where: { isActive: true }, orderBy: { sortOrder: "asc" } },
+        shadeGroups: {
+          where: { isActive: true },
+          orderBy: { sortOrder: "asc" },
+          include: { shades: { where: { isActive: true }, orderBy: { sortOrder: "asc" } } },
+        },
       },
     });
 
