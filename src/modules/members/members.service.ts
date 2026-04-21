@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 type MemberListParams = {
@@ -11,7 +12,10 @@ type MemberListParams = {
 
 @Injectable()
 export class MembersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly flowAccount: FlowAccountService,
+  ) {}
 
   async findAll(params: MemberListParams) {
     const where: Prisma.MemberWhereInput = {};
@@ -61,8 +65,9 @@ export class MembersService {
     email?: string;
     referredById?: string;
   }) {
+    let member;
     try {
-      return await this.prisma.member.create({
+      member = await this.prisma.member.create({
         data: payload,
         include: { _count: { select: { orders: true, referrals: true } } },
       });
@@ -72,6 +77,22 @@ export class MembersService {
       }
       throw error;
     }
+
+    const contactId = await this.flowAccount.createContact({
+      fullName: member.fullName,
+      email: member.email,
+      phone: member.phone,
+    });
+
+    if (contactId) {
+      member = await this.prisma.member.update({
+        where: { id: member.id },
+        data: { flowAccountContactId: contactId },
+        include: { _count: { select: { orders: true, referrals: true } } },
+      });
+    }
+
+    return member;
   }
 
   async findOne(id: string) {
