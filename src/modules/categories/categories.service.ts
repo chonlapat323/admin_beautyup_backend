@@ -104,6 +104,7 @@ export class CategoriesService {
   create(payload: {
     name: string;
     slug: string;
+    eyebrow?: string;
     description?: string;
     imageUrl?: string;
     tempImageFile?: string;
@@ -120,6 +121,7 @@ export class CategoriesService {
       data: {
         name: payload.name,
         slug: payload.slug,
+        eyebrow: payload.eyebrow,
         description: payload.description,
         imageUrl,
         requiresShadeSelection: payload.requiresShadeSelection ?? false,
@@ -154,6 +156,7 @@ export class CategoriesService {
     payload: {
       name?: string;
       slug?: string;
+      eyebrow?: string;
       description?: string;
       imageUrl?: string;
       tempImageFile?: string;
@@ -179,6 +182,7 @@ export class CategoriesService {
       data: {
         ...(payload.name !== undefined && { name: payload.name }),
         ...(payload.slug !== undefined && { slug: payload.slug }),
+        ...(payload.eyebrow !== undefined && { eyebrow: payload.eyebrow }),
         ...(payload.description !== undefined && { description: payload.description }),
         ...(imageUrl !== undefined && { imageUrl }),
         ...(payload.requiresShadeSelection !== undefined && { requiresShadeSelection: payload.requiresShadeSelection }),

@@ -116,6 +116,7 @@ model Category {
   id                     String       @id @default(cuid())
   name                   String
   slug                   String       @unique
+  eyebrow                String?
   description            String?
   imageUrl               String?
   requiresShadeSelection Boolean      @default(false)

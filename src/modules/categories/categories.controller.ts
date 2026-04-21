@@ -14,6 +14,11 @@ class CreateCategoryDto {
   @IsString()
   slug!: string;
 
+  @ApiPropertyOptional({ example: "Color Collection" })
+  @IsOptional()
+  @IsString()
+  eyebrow?: string;
+
   @ApiPropertyOptional({ example: "Hair color collection" })
   @IsOptional()
   @IsString()
