@@ -99,6 +99,11 @@ class CreateProductDto {
   @IsArray()
   @IsString({ each: true })
   tempFiles?: string[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  shadeId?: string;
 }
 
 class UpdateProductDto {
@@ -154,6 +159,11 @@ class UpdateProductDto {
   @ValidateNested({ each: true })
   @Type(() => OrderedImageItemDto)
   orderedImages?: OrderedImageItemDto[];
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  shadeId?: string | null;
 }
 
 class UpdateProductStatusDto {

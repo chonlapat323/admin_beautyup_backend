@@ -137,6 +137,7 @@ model Shade {
   imageUrl     String?
   sortOrder    Int        @default(0)
   isActive     Boolean    @default(true)
+  products     Product[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -155,6 +156,8 @@ model Product {
   status        ProductStatus   @default(DRAFT)
   categoryId    String
   category      Category        @relation(fields: [categoryId], references: [id])
+  shadeId       String?
+  shade         Shade?          @relation(fields: [shadeId], references: [id])
   storeId       String?
   store         Store?          @relation(fields: [storeId], references: [id])
   images        ProductImage[]

@@ -80,6 +80,7 @@ export class ProductsService {
         take: params.pageSize,
         include: {
           category: { select: { id: true, name: true } },
+          shade: { select: { id: true, name: true } },
           images: { orderBy: { sortOrder: "asc" }, take: 1 },
         },
       }),
@@ -109,6 +110,7 @@ export class ProductsService {
     price: number;
     specialPrice?: number;
     categoryId: string;
+    shadeId?: string;
     stock?: number;
     status?: ProductStatus;
     tempFiles?: string[];
@@ -122,6 +124,7 @@ export class ProductsService {
         price: payload.price,
         specialPrice: payload.specialPrice ?? null,
         categoryId: payload.categoryId,
+        shadeId: payload.shadeId ?? null,
         stock: payload.stock ?? 0,
         status: payload.status ?? ProductStatus.DRAFT,
       },
@@ -145,6 +148,7 @@ export class ProductsService {
       where: { id },
       include: {
         category: { select: { id: true, name: true } },
+        shade: { select: { id: true, name: true, shadeGroupId: true } },
         ...IMAGE_INCLUDE,
       },
     });
@@ -163,6 +167,7 @@ export class ProductsService {
       price?: number;
       specialPrice?: number | null;
       categoryId?: string;
+      shadeId?: string | null;
       stock?: number;
       status?: ProductStatus;
       orderedImages?: OrderedImageItem[];
@@ -180,6 +185,7 @@ export class ProductsService {
         price: payload.price,
         specialPrice: payload.specialPrice,
         categoryId: payload.categoryId,
+        shadeId: payload.shadeId,
         stock: payload.stock,
         status: payload.status,
       },
