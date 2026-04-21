@@ -28,6 +28,7 @@ class CreateBannerDto {
   @ApiPropertyOptional() @IsOptional() @IsString() linkType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() linkId?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() sortOrder?: number;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
 class UpdateBannerDto {
