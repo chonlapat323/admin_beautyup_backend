@@ -9,6 +9,7 @@ type ProductListParams = {
   status?: "all" | "active" | "inactive" | "draft";
   categoryId?: string;
   shadeId?: string;
+  isFeatured?: boolean;
   page: number;
   pageSize: number;
 };
@@ -76,6 +77,7 @@ export class ProductsService {
 
     if (params.categoryId) where.categoryId = params.categoryId;
     if (params.shadeId) where.shadeId = params.shadeId;
+    if (params.isFeatured === true) where.isFeatured = true;
 
     const [items, totalItems] = await this.prisma.$transaction([
       this.prisma.product.findMany({
@@ -118,6 +120,7 @@ export class ProductsService {
     shadeId?: string;
     stock?: number;
     status?: ProductStatus;
+    isFeatured?: boolean;
     tempFiles?: string[];
   }) {
     const product = await this.prisma.product.create({
@@ -132,6 +135,7 @@ export class ProductsService {
         shadeId: payload.shadeId ?? null,
         stock: payload.stock ?? 0,
         status: payload.status ?? ProductStatus.DRAFT,
+        isFeatured: payload.isFeatured ?? false,
       },
     });
 
@@ -175,6 +179,7 @@ export class ProductsService {
       shadeId?: string | null;
       stock?: number;
       status?: ProductStatus;
+      isFeatured?: boolean;
       orderedImages?: OrderedImageItem[];
     },
   ) {
@@ -193,6 +198,7 @@ export class ProductsService {
         shadeId: payload.shadeId,
         stock: payload.stock,
         status: payload.status,
+        isFeatured: payload.isFeatured,
       },
     });
 

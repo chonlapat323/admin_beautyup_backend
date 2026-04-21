@@ -18,6 +18,7 @@ import { ApiConsumes, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } 
 import { Type } from "class-transformer";
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
@@ -104,6 +105,11 @@ class CreateProductDto {
   @IsOptional()
   @IsString()
   shadeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
 }
 
 class UpdateProductDto {
@@ -164,6 +170,11 @@ class UpdateProductDto {
   @IsOptional()
   @IsString()
   shadeId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
 }
 
 class UpdateProductStatusDto {
@@ -192,6 +203,12 @@ class ListProductsQueryDto {
   @IsOptional()
   @IsString()
   shadeId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  isFeatured?: boolean;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
@@ -242,6 +259,7 @@ export class ProductsController {
       status: (query.status as "all" | "active" | "inactive" | "draft") || "all",
       categoryId: query.categoryId || undefined,
       shadeId: query.shadeId || undefined,
+      isFeatured: query.isFeatured === true ? true : undefined,
       page: query.page && query.page > 0 ? query.page : 1,
       pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 10,
     });

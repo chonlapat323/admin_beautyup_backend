@@ -169,6 +169,7 @@ model Product {
   reserveStock  Int             @default(0)
   sellableStock Int             @default(0)
   status        ProductStatus   @default(DRAFT)
+  isFeatured    Boolean         @default(false)
   categoryId    String
   category      Category        @relation(fields: [categoryId], references: [id])
   shadeId       String?
