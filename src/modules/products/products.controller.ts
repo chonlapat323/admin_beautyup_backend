@@ -183,6 +183,16 @@ class ListProductsQueryDto {
   @IsString()
   status?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  categoryId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  shadeId?: string;
+
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -230,6 +240,8 @@ export class ProductsController {
     return this.productsService.findAll({
       search: query.search?.trim() || undefined,
       status: (query.status as "all" | "active" | "inactive" | "draft") || "all",
+      categoryId: query.categoryId || undefined,
+      shadeId: query.shadeId || undefined,
       page: query.page && query.page > 0 ? query.page : 1,
       pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 10,
     });

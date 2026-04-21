@@ -7,6 +7,8 @@ import { PrismaService } from "../prisma/prisma.service";
 type ProductListParams = {
   search?: string;
   status?: "all" | "active" | "inactive" | "draft";
+  categoryId?: string;
+  shadeId?: string;
   page: number;
   pageSize: number;
 };
@@ -71,6 +73,9 @@ export class ProductsService {
     if (params.status === "active") where.status = ProductStatus.ACTIVE;
     else if (params.status === "inactive") where.status = ProductStatus.INACTIVE;
     else if (params.status === "draft") where.status = ProductStatus.DRAFT;
+
+    if (params.categoryId) where.categoryId = params.categoryId;
+    if (params.shadeId) where.shadeId = params.shadeId;
 
     const [items, totalItems] = await this.prisma.$transaction([
       this.prisma.product.findMany({
