@@ -4,6 +4,7 @@ import { ConfigModule } from "@nestjs/config";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AdminUsersModule } from "./modules/admin-users/admin-users.module";
+import { BannersModule } from "./modules/banners/banners.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CategoriesModule } from "./modules/categories/categories.module";
 import { MembersModule } from "./modules/members/members.module";
@@ -44,6 +45,7 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
     RolesModule,
     ShadeGroupsModule,
     ShadesModule,
+    BannersModule,
     SeederModule,
     UploadsModule,
   ],
