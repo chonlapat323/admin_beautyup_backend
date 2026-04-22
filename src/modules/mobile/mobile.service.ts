@@ -144,13 +144,7 @@ export class MobileService {
   async getOrders(memberId: string) {
     return this.prisma.order.findMany({
       where: { memberId },
-      include: {
-        items: {
-          include: {
-            product: { select: { images: { take: 1, orderBy: { sortOrder: "asc" } } } },
-          },
-        },
-      },
+      include: { items: true },
       orderBy: { createdAt: "desc" },
     });
   }
