@@ -11,7 +11,7 @@ module.exports = {
         NODE_ENV: "production",
         PORT: 3001,
         NODE_TLS_REJECT_UNAUTHORIZED: "0",
-        APP_URL: "http://168.144.39.193:3001",
+        APP_URL: "https://api.beautyup-enterprise.com",
       },
     },
   ],
