@@ -102,6 +102,70 @@ export class CommissionService {
     });
   }
 
+  async report(period: "day" | "week" | "month") {
+    const now = new Date();
+    let from: Date;
+    if (period === "day") {
+      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+    } else if (period === "week") {
+      from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13 * 7);
+    } else {
+      from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    }
+
+    const rows = await this.prisma.commission.findMany({
+      where: { createdAt: { gte: from }, status: { not: "CANCELLED" } },
+      include: { earner: { select: { id: true, fullName: true, memberType: true, referralCode: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // group by period bucket + earner
+    const bucketMap = new Map<string, {
+      bucket: string;
+      earnerId: string;
+      earnerName: string;
+      memberType: string;
+      referralCode: string | null;
+      count: number;
+      totalAmount: number;
+    }>();
+
+    for (const row of rows) {
+      const d = new Date(row.createdAt);
+      let bucket: string;
+      if (period === "day") {
+        bucket = d.toISOString().slice(0, 10);
+      } else if (period === "week") {
+        const weekStart = new Date(d);
+        weekStart.setDate(d.getDate() - d.getDay());
+        bucket = weekStart.toISOString().slice(0, 10);
+      } else {
+        bucket = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      }
+
+      const key = `${bucket}__${row.earnerId}`;
+      const existing = bucketMap.get(key);
+      if (existing) {
+        existing.count += 1;
+        existing.totalAmount += Number(row.amount);
+      } else {
+        bucketMap.set(key, {
+          bucket,
+          earnerId: row.earnerId,
+          earnerName: row.earner.fullName,
+          memberType: row.earner.memberType,
+          referralCode: row.earner.referralCode,
+          count: 1,
+          totalAmount: Number(row.amount),
+        });
+      }
+    }
+
+    return Array.from(bucketMap.values()).sort((a, b) =>
+      b.bucket.localeCompare(a.bucket) || b.totalAmount - a.totalAmount,
+    );
+  }
+
   async summary(earnerId: string) {
     const [pending, paid] = await Promise.all([
       this.prisma.commission.aggregate({

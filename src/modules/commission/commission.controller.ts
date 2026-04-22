@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { CommissionStatus } from "@prisma/client";
-import { IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 import { Type } from "class-transformer";
 import { CommissionService } from "./commission.service";
 
@@ -61,6 +61,13 @@ class MarkPaidDto {
 @Controller("commissions")
 export class CommissionController {
   constructor(private readonly commissionService: CommissionService) {}
+
+  @Get("report")
+  @ApiOperation({ summary: "Commission report grouped by period" })
+  report(@Query("period") period: "day" | "week" | "month" = "day") {
+    const valid = ["day", "week", "month"];
+    return this.commissionService.report(valid.includes(period) ? period : "day");
+  }
 
   @Get("settings")
   @ApiOperation({ summary: "Get commission rate settings" })

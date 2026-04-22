@@ -18,6 +18,17 @@ function generateOrderNumber(): string {
   return `BU-${date}-${rand}`;
 }
 
+async function makeReferralCode(prisma: PrismaService): Promise<string> {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    let code = "BU-";
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const existing = await prisma.member.findFirst({ where: { referralCode: code } });
+    if (!existing) return code;
+  }
+}
+
 @Injectable()
 export class MobileService {
   constructor(
@@ -38,13 +49,16 @@ export class MobileService {
 
     if (existing) throw new BadRequestException("อีเมลหรือเบอร์โทรนี้ถูกใช้งานแล้ว");
 
+    // หา referrer จาก referralCode
     let referredById: string | undefined;
     if (payload.referralCode) {
       const referrer = await this.prisma.member.findFirst({
-        where: { id: payload.referralCode, isActive: true },
+        where: { referralCode: payload.referralCode, isActive: true },
       });
       if (referrer) referredById = referrer.id;
     }
+
+    const myReferralCode = await makeReferralCode(this.prisma);
 
     const member = await this.prisma.member.create({
       data: {
@@ -53,6 +67,7 @@ export class MobileService {
         phone: !isEmail ? payload.identifier : undefined,
         passwordHash: hashPassword(payload.password),
         referredById,
+        referralCode: myReferralCode,
       },
     });
 
@@ -158,7 +173,15 @@ export class MobileService {
     return session.member;
   }
 
-  private safeProfile(member: { id: string; fullName: string; email: string | null; phone: string | null; memberType: string; pointBalance: number }) {
+  private safeProfile(member: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+    memberType: string;
+    pointBalance: number;
+    [key: string]: unknown;
+  }) {
     return {
       id: member.id,
       fullName: member.fullName,
@@ -166,6 +189,7 @@ export class MobileService {
       phone: member.phone,
       memberType: member.memberType,
       pointBalance: member.pointBalance,
+      referralCode: (member.referralCode as string | null) ?? null,
     };
   }
 }

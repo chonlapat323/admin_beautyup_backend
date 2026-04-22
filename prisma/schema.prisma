@@ -97,6 +97,7 @@ model Member {
   memberType           MemberType      @default(REGULAR)
   isActive             Boolean         @default(true)
   pointBalance         Int             @default(0)
+  referralCode         String?         @unique
   referredById         String?
   referredBy           Member?         @relation("MemberReferral", fields: [referredById], references: [id])
   referrals            Member[]        @relation("MemberReferral")
