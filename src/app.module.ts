@@ -22,6 +22,8 @@ import { StockModule } from "./modules/stock/stock.module";
 import { ShadeGroupsModule } from "./modules/shade-groups/shade-groups.module";
 import { ShadesModule } from "./modules/shades/shades.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
+import { MobileModule } from "./modules/mobile/mobile.module";
+import { CommissionModule } from "./modules/commission/commission.module";
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
       cache: true,
     }),
     PrismaModule,
+    MobileModule,
+    CommissionModule,
     AuthModule,
     AdminUsersModule,
     CategoriesModule,

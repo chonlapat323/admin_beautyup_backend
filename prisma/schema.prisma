@@ -21,6 +21,17 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum MemberType {
+  REGULAR
+  SALON
+}
+
+enum CommissionStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
 model Banner {
   id          String   @id @default(cuid())
   eyebrow     String
@@ -78,22 +89,26 @@ model AdminUser {
 }
 
 model Member {
-  id             String          @id @default(cuid())
-  email          String?         @unique
-  phone          String?         @unique
-  fullName       String
-  isActive       Boolean         @default(true)
-  pointBalance   Int             @default(0)
-  referredById   String?
-  referredBy     Member?         @relation("MemberReferral", fields: [referredById], references: [id])
-  referrals      Member[]        @relation("MemberReferral")
-  storeId                String?
-  store                  Store?          @relation(fields: [storeId], references: [id])
-  addresses              MemberAddress[]
-  orders                 Order[]
-  flowAccountContactId   Int?
-  createdAt              DateTime        @default(now())
-  updatedAt              DateTime        @updatedAt
+  id                   String          @id @default(cuid())
+  email                String?         @unique
+  phone                String?         @unique
+  fullName             String
+  passwordHash         String?
+  memberType           MemberType      @default(REGULAR)
+  isActive             Boolean         @default(true)
+  pointBalance         Int             @default(0)
+  referredById         String?
+  referredBy           Member?         @relation("MemberReferral", fields: [referredById], references: [id])
+  referrals            Member[]        @relation("MemberReferral")
+  storeId              String?
+  store                Store?          @relation(fields: [storeId], references: [id])
+  addresses            MemberAddress[]
+  orders               Order[]
+  commissionsEarned    Commission[]    @relation("CommissionEarner")
+  sessions             MemberSession[]
+  flowAccountContactId Int?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
 }
 
 model MemberAddress {
@@ -160,28 +175,28 @@ model Shade {
 }
 
 model Product {
-  id            String          @id @default(cuid())
-  sku           String          @unique
+  id            String         @id @default(cuid())
+  sku           String         @unique
   name          String
-  slug          String          @unique
+  slug          String         @unique
   description   String?
-  price         Decimal         @db.Decimal(10, 2)
-  specialPrice  Decimal?        @db.Decimal(10, 2)
-  stock         Int             @default(0)
-  reserveStock  Int             @default(0)
-  sellableStock Int             @default(0)
-  status        ProductStatus   @default(DRAFT)
-  isFeatured    Boolean         @default(false)
+  price         Decimal        @db.Decimal(10, 2)
+  specialPrice  Decimal?       @db.Decimal(10, 2)
+  stock         Int            @default(0)
+  reserveStock  Int            @default(0)
+  sellableStock Int            @default(0)
+  status        ProductStatus  @default(DRAFT)
+  isFeatured    Boolean        @default(false)
   categoryId    String
-  category      Category        @relation(fields: [categoryId], references: [id])
+  category      Category       @relation(fields: [categoryId], references: [id])
   shadeId       String?
-  shade         Shade?          @relation(fields: [shadeId], references: [id])
+  shade         Shade?         @relation(fields: [shadeId], references: [id])
   storeId       String?
-  store         Store?          @relation(fields: [storeId], references: [id])
+  store         Store?         @relation(fields: [storeId], references: [id])
   images        ProductImage[]
   orderItems    OrderItem[]
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model ProductImage {
@@ -208,22 +223,50 @@ model Order {
   discountAmount Decimal      @db.Decimal(10, 2) @default(0)
   totalAmount    Decimal      @db.Decimal(10, 2)
   pointEarned    Int          @default(0)
+  shippingName   String?
+  shippingPhone  String?
+  shippingAddr   String?
   items          OrderItem[]
+  commissions    Commission[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  sku        String
+  name       String
+  quantity   Int
+  unitPrice  Decimal  @db.Decimal(10, 2)
+  totalPrice Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model MemberSession {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Commission {
+  id          String           @id @default(cuid())
+  earnerId    String
+  earner      Member           @relation("CommissionEarner", fields: [earnerId], references: [id])
   orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  sku         String
-  name        String
-  quantity    Int
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  totalPrice  Decimal  @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  order       Order            @relation(fields: [orderId], references: [id])
+  orderAmount Decimal          @db.Decimal(10, 2)
+  rate        Decimal          @db.Decimal(5, 2)
+  amount      Decimal          @db.Decimal(10, 2)
+  status      CommissionStatus @default(PENDING)
+  paidAt      DateTime?
+  note        String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
