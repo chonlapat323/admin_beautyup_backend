@@ -42,7 +42,9 @@ export class MobileService {
     password: string;
     referralCode?: string;
   }) {
+    console.log("[register] payload received:", JSON.stringify({ fullName: payload.fullName, identifier: payload.identifier, hasReferralCode: !!payload.referralCode }));
     const isEmail = payload.identifier.includes("@");
+    console.log("[register] isEmail:", isEmail, "→ will set", isEmail ? "email" : "phone", "=", payload.identifier);
     const existing = isEmail
       ? await this.prisma.member.findUnique({ where: { email: payload.identifier } })
       : await this.prisma.member.findUnique({ where: { phone: payload.identifier } });
@@ -60,16 +62,18 @@ export class MobileService {
 
     const myReferralCode = await makeReferralCode(this.prisma);
 
-    const member = await this.prisma.member.create({
-      data: {
-        fullName: payload.fullName,
-        email: isEmail ? payload.identifier : undefined,
-        phone: !isEmail ? payload.identifier : undefined,
-        passwordHash: hashPassword(payload.password),
-        referredById,
-        referralCode: myReferralCode,
-      },
-    });
+    const createData = {
+      fullName: payload.fullName,
+      email: isEmail ? payload.identifier : undefined,
+      phone: !isEmail ? payload.identifier : undefined,
+      passwordHash: hashPassword(payload.password),
+      referredById,
+      referralCode: myReferralCode,
+    };
+    console.log("[register] creating member with:", JSON.stringify({ fullName: createData.fullName, email: createData.email, phone: createData.phone, referralCode: createData.referralCode }));
+
+    const member = await this.prisma.member.create({ data: createData });
+    console.log("[register] member created:", JSON.stringify({ id: member.id, email: member.email, phone: member.phone }));
 
     const token = generateToken();
     await this.prisma.memberSession.create({ data: { memberId: member.id, token } });
