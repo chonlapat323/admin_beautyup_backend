@@ -1,15 +1,40 @@
 import { Injectable } from "@nestjs/common";
-import { CommissionStatus, MemberType } from "@prisma/client";
+import { CommissionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
-const COMMISSION_RATES: Record<MemberType, number> = {
-  SALON: 10,
-  REGULAR: 5,
-};
+const DEFAULT_RATES = { SALON: 10, REGULAR: 5 };
+const RATE_KEY = { SALON: "commission.rate.SALON", REGULAR: "commission.rate.REGULAR" };
 
 @Injectable()
 export class CommissionService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async getRates(): Promise<{ salon: number; regular: number }> {
+    const rows = await this.prisma.setting.findMany({
+      where: { key: { in: [RATE_KEY.SALON, RATE_KEY.REGULAR] } },
+    });
+    const map = Object.fromEntries(rows.map((r) => [r.key, Number(r.value)]));
+    return {
+      salon: map[RATE_KEY.SALON] ?? DEFAULT_RATES.SALON,
+      regular: map[RATE_KEY.REGULAR] ?? DEFAULT_RATES.REGULAR,
+    };
+  }
+
+  async updateRates(salon: number, regular: number) {
+    await this.prisma.$transaction([
+      this.prisma.setting.upsert({
+        where: { key: RATE_KEY.SALON },
+        create: { key: RATE_KEY.SALON, value: String(salon) },
+        update: { value: String(salon) },
+      }),
+      this.prisma.setting.upsert({
+        where: { key: RATE_KEY.REGULAR },
+        create: { key: RATE_KEY.REGULAR, value: String(regular) },
+        update: { value: String(regular) },
+      }),
+    ]);
+    return { salon, regular };
+  }
 
   async createForOrder(orderId: string) {
     const order = await this.prisma.order.findUnique({
@@ -20,7 +45,8 @@ export class CommissionService {
     if (!order?.member?.referredBy) return null;
 
     const referrer = order.member.referredBy;
-    const rate = COMMISSION_RATES[referrer.memberType];
+    const rates = await this.getRates();
+    const rate = referrer.memberType === "SALON" ? rates.salon : rates.regular;
     const amount = (Number(order.totalAmount) * rate) / 100;
 
     return this.prisma.commission.create({

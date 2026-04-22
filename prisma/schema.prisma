@@ -255,6 +255,12 @@ model MemberSession {
   createdAt DateTime @default(now())
 }
 
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
 model Commission {
   id          String           @id @default(cuid())
   earnerId    String

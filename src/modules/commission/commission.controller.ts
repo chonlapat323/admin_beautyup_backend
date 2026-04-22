@@ -1,7 +1,7 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { CommissionStatus } from "@prisma/client";
-import { IsArray, IsInt, IsOptional, IsString } from "class-validator";
+import { IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 import { Type } from "class-transformer";
 import { CommissionService } from "./commission.service";
 
@@ -29,6 +29,22 @@ class ListCommissionsQueryDto {
   pageSize?: number;
 }
 
+class UpdateRatesDto {
+  @ApiProperty({ description: "SALON rate (%)", example: 10 })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  salon!: number;
+
+  @ApiProperty({ description: "REGULAR rate (%)", example: 5 })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  regular!: number;
+}
+
 class MarkPaidDto {
   @ApiProperty({ type: [String] })
   @IsArray()
@@ -45,6 +61,18 @@ class MarkPaidDto {
 @Controller("commissions")
 export class CommissionController {
   constructor(private readonly commissionService: CommissionService) {}
+
+  @Get("settings")
+  @ApiOperation({ summary: "Get commission rate settings" })
+  getSettings() {
+    return this.commissionService.getRates();
+  }
+
+  @Put("settings")
+  @ApiOperation({ summary: "Update commission rate settings" })
+  updateSettings(@Body() dto: UpdateRatesDto) {
+    return this.commissionService.updateRates(dto.salon, dto.regular);
+  }
 
   @Get()
   @ApiOperation({ summary: "List commissions" })
