@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsOptional, IsString, MinLength, ValidateNested } from "class-validator";
+import { IsArray, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { MobileService } from "./mobile.service";
 
@@ -18,7 +18,7 @@ class LoginDto {
 
 class CheckoutItemDto {
   @ApiProperty() @IsString() productId!: string;
-  @ApiProperty() quantity!: number;
+  @ApiProperty() @IsInt() @Min(1) @Type(() => Number) quantity!: number;
 }
 
 class CheckoutDto {
