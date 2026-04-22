@@ -1,26 +1,35 @@
 import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class OrdersService {
-  findAll() {
-    return [
-      { id: "ord_001", orderNumber: "BU-24003", status: "PAID", totalAmount: 69 },
-      { id: "ord_002", orderNumber: "BU-24031", status: "PROCESSING", totalAmount: 120 },
-    ];
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll() {
+    return this.prisma.order.findMany({
+      include: {
+        member: { select: { fullName: true, email: true, phone: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    });
   }
 
-  findOne(id: string) {
-    return {
-      id,
-      orderNumber: "BU-24003",
-      status: "PAID",
-      subtotalAmount: 49,
-      shippingAmount: 20,
-      totalAmount: 69,
-    };
+  async findOne(id: string) {
+    return this.prisma.order.findUnique({
+      where: { id },
+      include: {
+        member: { select: { fullName: true, email: true, phone: true } },
+        items: { include: { product: { select: { name: true, sku: true } } } },
+      },
+    });
   }
 
-  updateStatus(id: string, status: string) {
-    return { message: "Order status updated.", id, status };
+  async updateStatus(id: string, status: string) {
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: { status: status as never },
+    });
+    return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
 }
