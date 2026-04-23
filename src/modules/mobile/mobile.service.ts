@@ -159,21 +159,32 @@ export class MobileService {
     const shippingAmount = 0;
     const totalAmount = subtotal + shippingAmount;
 
-    const order = await this.prisma.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        memberId,
-        status: "PAID",
-        subtotalAmount: subtotal,
-        shippingAmount,
-        totalAmount,
-        shippingName: payload.shippingName,
-        shippingPhone: payload.shippingPhone,
-        shippingAddr: payload.shippingAddr,
-        items: { create: orderItems },
-      },
-      include: { items: true },
-    });
+    const [order] = await this.prisma.$transaction([
+      this.prisma.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          memberId,
+          status: "PAID",
+          subtotalAmount: subtotal,
+          shippingAmount,
+          totalAmount,
+          shippingName: payload.shippingName,
+          shippingPhone: payload.shippingPhone,
+          shippingAddr: payload.shippingAddr,
+          items: { create: orderItems },
+        },
+        include: { items: true },
+      }),
+      ...orderItems.map((item) =>
+        this.prisma.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { decrement: item.quantity },
+            sellableStock: { decrement: item.quantity },
+          },
+        }),
+      ),
+    ]);
 
     await this.commissionService.createForOrder(order.id);
 
