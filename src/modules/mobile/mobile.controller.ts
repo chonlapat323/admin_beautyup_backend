@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { MobileService } from "./mobile.service";
 
@@ -16,6 +16,30 @@ class RegisterDto {
 class LoginDto {
   @ApiProperty() @IsString() identifier!: string;
   @ApiProperty() @IsString() password!: string;
+}
+
+class AddressDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() label?: string;
+  @ApiProperty() @IsString() recipient!: string;
+  @ApiProperty() @IsString() phone!: string;
+  @ApiProperty() @IsString() addressLine1!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() addressLine2?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() district?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() province?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() postalCode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isDefault?: boolean;
+}
+
+class UpdateAddressDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() label?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() recipient?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() addressLine1?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() addressLine2?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() district?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() province?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() postalCode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isDefault?: boolean;
 }
 
 class CheckoutItemDto {
@@ -71,6 +95,45 @@ export class MobileController {
   async getOrders(@Headers("authorization") auth: string) {
     const member = await this.extractMember(auth);
     return this.mobileService.getOrders(member.id);
+  }
+
+  @Get("addresses")
+  @ApiOperation({ summary: "List my addresses" })
+  async getAddresses(@Headers("authorization") auth: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.listAddresses(member.id);
+  }
+
+  @Post("addresses")
+  @ApiOperation({ summary: "Add address" })
+  async addAddress(@Headers("authorization") auth: string, @Body() dto: AddressDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.createAddress(member.id, dto);
+  }
+
+  @Patch("addresses/:id")
+  @ApiOperation({ summary: "Update address" })
+  async updateAddress(
+    @Headers("authorization") auth: string,
+    @Param("id") id: string,
+    @Body() dto: UpdateAddressDto,
+  ) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.updateAddress(member.id, id, dto);
+  }
+
+  @Delete("addresses/:id")
+  @ApiOperation({ summary: "Delete address" })
+  async deleteAddress(@Headers("authorization") auth: string, @Param("id") id: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.deleteAddress(member.id, id);
+  }
+
+  @Patch("addresses/:id/default")
+  @ApiOperation({ summary: "Set address as default" })
+  async setDefaultAddress(@Headers("authorization") auth: string, @Param("id") id: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.setDefaultAddress(member.id, id);
   }
 
   private async extractMember(auth: string) {

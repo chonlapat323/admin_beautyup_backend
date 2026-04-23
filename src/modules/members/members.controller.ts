@@ -43,6 +43,62 @@ class UpdateMemberDto {
   memberType?: "REGULAR" | "SALON";
 }
 
+class CreateAddressDto {
+  @ApiPropertyOptional({ example: "บ้าน" })
+  @IsOptional()
+  @IsString()
+  label?: string;
+
+  @ApiProperty({ example: "สมชาย ใจดี" })
+  @IsString()
+  recipient!: string;
+
+  @ApiProperty({ example: "0812345678" })
+  @IsString()
+  phone!: string;
+
+  @ApiProperty({ example: "123 ถ.สุขุมวิท" })
+  @IsString()
+  addressLine1!: string;
+
+  @ApiPropertyOptional({ example: "ห้อง 101 อาคาร A" })
+  @IsOptional()
+  @IsString()
+  addressLine2?: string;
+
+  @ApiPropertyOptional({ example: "คลองเตย" })
+  @IsOptional()
+  @IsString()
+  district?: string;
+
+  @ApiPropertyOptional({ example: "กรุงเทพมหานคร" })
+  @IsOptional()
+  @IsString()
+  province?: string;
+
+  @ApiPropertyOptional({ example: "10110" })
+  @IsOptional()
+  @IsString()
+  postalCode?: string;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
+}
+
+class UpdateAddressDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() label?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() recipient?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() addressLine1?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() addressLine2?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() district?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() province?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() postalCode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isDefault?: boolean;
+}
+
 class UpdateMemberStatusDto {
   @ApiProperty({ example: true })
   @IsBoolean()
@@ -117,5 +173,37 @@ export class MembersController {
   @ApiOperation({ summary: "Delete member" })
   remove(@Param("id") id: string) {
     return this.membersService.remove(id);
+  }
+
+  // ─── Addresses ────────────────────────────────────────────────────────────────
+
+  @Get(":id/addresses")
+  @ApiOperation({ summary: "List addresses for member" })
+  listAddresses(@Param("id") id: string) {
+    return this.membersService.listAddresses(id);
+  }
+
+  @Post(":id/addresses")
+  @ApiOperation({ summary: "Add address for member" })
+  createAddress(@Param("id") id: string, @Body() dto: CreateAddressDto) {
+    return this.membersService.createAddress(id, dto);
+  }
+
+  @Patch(":id/addresses/:aid")
+  @ApiOperation({ summary: "Update address" })
+  updateAddress(@Param("id") id: string, @Param("aid") aid: string, @Body() dto: UpdateAddressDto) {
+    return this.membersService.updateAddress(id, aid, dto);
+  }
+
+  @Delete(":id/addresses/:aid")
+  @ApiOperation({ summary: "Delete address" })
+  deleteAddress(@Param("id") id: string, @Param("aid") aid: string) {
+    return this.membersService.deleteAddress(id, aid);
+  }
+
+  @Patch(":id/addresses/:aid/default")
+  @ApiOperation({ summary: "Set address as default" })
+  setDefaultAddress(@Param("id") id: string, @Param("aid") aid: string) {
+    return this.membersService.setDefaultAddress(id, aid);
   }
 }

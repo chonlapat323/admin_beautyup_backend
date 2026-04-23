@@ -188,6 +188,79 @@ export class MobileService {
     });
   }
 
+  // ─── Addresses ────────────────────────────────────────────────────────────────
+
+  async listAddresses(memberId: string) {
+    return this.prisma.memberAddress.findMany({
+      where: { memberId },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }],
+    });
+  }
+
+  async createAddress(
+    memberId: string,
+    payload: {
+      label?: string;
+      recipient: string;
+      phone: string;
+      addressLine1: string;
+      addressLine2?: string;
+      district?: string;
+      province?: string;
+      postalCode?: string;
+      isDefault?: boolean;
+    },
+  ) {
+    if (payload.isDefault) {
+      await this.prisma.memberAddress.updateMany({ where: { memberId }, data: { isDefault: false } });
+    }
+    const isFirst = (await this.prisma.memberAddress.count({ where: { memberId } })) === 0;
+    return this.prisma.memberAddress.create({
+      data: { ...payload, memberId, isDefault: payload.isDefault ?? isFirst },
+    });
+  }
+
+  async updateAddress(
+    memberId: string,
+    addressId: string,
+    payload: {
+      label?: string;
+      recipient?: string;
+      phone?: string;
+      addressLine1?: string;
+      addressLine2?: string;
+      district?: string;
+      province?: string;
+      postalCode?: string;
+      isDefault?: boolean;
+    },
+  ) {
+    const addr = await this.prisma.memberAddress.findFirst({ where: { id: addressId, memberId } });
+    if (!addr) throw new BadRequestException("ไม่พบที่อยู่");
+    if (payload.isDefault) {
+      await this.prisma.memberAddress.updateMany({ where: { memberId }, data: { isDefault: false } });
+    }
+    return this.prisma.memberAddress.update({ where: { id: addressId }, data: payload });
+  }
+
+  async deleteAddress(memberId: string, addressId: string) {
+    const addr = await this.prisma.memberAddress.findFirst({ where: { id: addressId, memberId } });
+    if (!addr) throw new BadRequestException("ไม่พบที่อยู่");
+    await this.prisma.memberAddress.delete({ where: { id: addressId } });
+    if (addr.isDefault) {
+      const next = await this.prisma.memberAddress.findFirst({ where: { memberId }, orderBy: { createdAt: "asc" } });
+      if (next) await this.prisma.memberAddress.update({ where: { id: next.id }, data: { isDefault: true } });
+    }
+    return { success: true };
+  }
+
+  async setDefaultAddress(memberId: string, addressId: string) {
+    const addr = await this.prisma.memberAddress.findFirst({ where: { id: addressId, memberId } });
+    if (!addr) throw new BadRequestException("ไม่พบที่อยู่");
+    await this.prisma.memberAddress.updateMany({ where: { memberId }, data: { isDefault: false } });
+    return this.prisma.memberAddress.update({ where: { id: addressId }, data: { isDefault: true } });
+  }
+
   async validateToken(token: string) {
     const session = await this.prisma.memberSession.findUnique({
       where: { token },
