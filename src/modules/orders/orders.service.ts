@@ -20,7 +20,17 @@ export class OrdersService {
       where: { id },
       include: {
         member: { select: { fullName: true, email: true, phone: true } },
-        items: { include: { product: { select: { name: true, sku: true } } } },
+        items: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                sku: true,
+                images: { select: { url: true }, orderBy: { sortOrder: "asc" }, take: 1 },
+              },
+            },
+          },
+        },
         statusLogs: { orderBy: { createdAt: "desc" } },
       },
     });
