@@ -108,8 +108,6 @@ export class MembersService {
     id: string,
     payload: {
       fullName?: string;
-      phone?: string;
-      email?: string;
       referredById?: string;
       memberType?: "REGULAR" | "SALON";
     },
