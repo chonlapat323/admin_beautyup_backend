@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Param, Patch } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
-import { IsEnum } from "class-validator";
+import { IsEnum, IsOptional, IsString } from "class-validator";
 
 import { OrdersService } from "./orders.service";
 
@@ -17,6 +17,11 @@ class UpdateOrderStatusDto {
   @ApiProperty({ enum: OrderStatusDto, example: OrderStatusDto.PROCESSING })
   @IsEnum(OrderStatusDto)
   status!: OrderStatusDto;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  changedByName?: string;
 }
 
 @ApiTags("Orders")
@@ -39,6 +44,6 @@ export class OrdersController {
   @Patch(":id/status")
   @ApiOperation({ summary: "Update order status" })
   updateStatus(@Param("id") id: string, @Body() dto: UpdateOrderStatusDto) {
-    return this.ordersService.updateStatus(id, dto.status);
+    return this.ordersService.updateStatus(id, dto.status, dto.changedByName ?? "Admin");
   }
 }

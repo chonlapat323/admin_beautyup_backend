@@ -21,15 +21,30 @@ export class OrdersService {
       include: {
         member: { select: { fullName: true, email: true, phone: true } },
         items: { include: { product: { select: { name: true, sku: true } } } },
+        statusLogs: { orderBy: { createdAt: "desc" } },
       },
     });
   }
 
-  async updateStatus(id: string, status: string) {
-    const updated = await this.prisma.order.update({
-      where: { id },
-      data: { status: status as never },
-    });
+  async updateStatus(id: string, status: string, changedByName: string) {
+    const order = await this.prisma.order.findUnique({ where: { id }, select: { status: true } });
+    if (!order) throw new Error("Order not found");
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.order.update({
+        where: { id },
+        data: { status: status as never },
+      }),
+      this.prisma.orderStatusLog.create({
+        data: {
+          orderId: id,
+          fromStatus: order.status,
+          toStatus: status as never,
+          changedByName,
+        },
+      }),
+    ]);
+
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
 }
