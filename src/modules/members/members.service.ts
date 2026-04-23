@@ -108,7 +108,6 @@ export class MembersService {
     id: string,
     payload: {
       fullName?: string;
-      referredById?: string;
       memberType?: "REGULAR" | "SALON";
     },
   ) {

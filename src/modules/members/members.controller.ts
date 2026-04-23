@@ -37,11 +37,6 @@ class UpdateMemberDto {
   @IsString()
   fullName?: string;
 
-  @ApiPropertyOptional({ example: "mem_000" })
-  @IsOptional()
-  @IsString()
-  referredById?: string;
-
   @ApiPropertyOptional({ enum: ["REGULAR", "SALON"], example: "REGULAR" })
   @IsOptional()
   @IsEnum(["REGULAR", "SALON"])
