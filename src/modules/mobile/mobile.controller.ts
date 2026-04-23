@@ -6,7 +6,8 @@ import { MobileService } from "./mobile.service";
 
 class RegisterDto {
   @ApiProperty() @IsString() fullName!: string;
-  @ApiProperty() @IsString() identifier!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() email?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
   @ApiProperty() @IsString() @MinLength(6) password!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() referralCode?: string;
 }

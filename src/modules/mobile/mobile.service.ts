@@ -38,20 +38,24 @@ export class MobileService {
 
   async register(payload: {
     fullName: string;
-    identifier: string;
+    email?: string;
+    phone?: string;
     password: string;
     referralCode?: string;
   }) {
-    console.log("[register] payload received:", JSON.stringify({ fullName: payload.fullName, identifier: payload.identifier, hasReferralCode: !!payload.referralCode }));
-    const isEmail = payload.identifier.includes("@");
-    console.log("[register] isEmail:", isEmail, "→ will set", isEmail ? "email" : "phone", "=", payload.identifier);
-    const existing = isEmail
-      ? await this.prisma.member.findUnique({ where: { email: payload.identifier } })
-      : await this.prisma.member.findUnique({ where: { phone: payload.identifier } });
+    if (!payload.email && !payload.phone) {
+      throw new BadRequestException("กรุณากรอกอีเมลหรือเบอร์โทร");
+    }
 
-    if (existing) throw new BadRequestException("อีเมลหรือเบอร์โทรนี้ถูกใช้งานแล้ว");
+    if (payload.email) {
+      const existing = await this.prisma.member.findUnique({ where: { email: payload.email } });
+      if (existing) throw new BadRequestException("อีเมลนี้ถูกใช้งานแล้ว");
+    }
+    if (payload.phone) {
+      const existing = await this.prisma.member.findUnique({ where: { phone: payload.phone } });
+      if (existing) throw new BadRequestException("เบอร์โทรนี้ถูกใช้งานแล้ว");
+    }
 
-    // หา referrer จาก referralCode
     let referredById: string | undefined;
     if (payload.referralCode) {
       const referrer = await this.prisma.member.findFirst({
@@ -62,18 +66,16 @@ export class MobileService {
 
     const myReferralCode = await makeReferralCode(this.prisma);
 
-    const createData = {
-      fullName: payload.fullName,
-      email: isEmail ? payload.identifier : undefined,
-      phone: !isEmail ? payload.identifier : undefined,
-      passwordHash: hashPassword(payload.password),
-      referredById,
-      referralCode: myReferralCode,
-    };
-    console.log("[register] creating member with:", JSON.stringify({ fullName: createData.fullName, email: createData.email, phone: createData.phone, referralCode: createData.referralCode }));
-
-    const member = await this.prisma.member.create({ data: createData });
-    console.log("[register] member created:", JSON.stringify({ id: member.id, email: member.email, phone: member.phone }));
+    const member = await this.prisma.member.create({
+      data: {
+        fullName: payload.fullName,
+        email: payload.email ?? undefined,
+        phone: payload.phone ?? undefined,
+        passwordHash: hashPassword(payload.password),
+        referredById,
+        referralCode: myReferralCode,
+      },
+    });
 
     const token = generateToken();
     await this.prisma.memberSession.create({ data: { memberId: member.id, token } });
@@ -85,7 +87,7 @@ export class MobileService {
     const isEmail = payload.identifier.includes("@");
     const member = isEmail
       ? await this.prisma.member.findUnique({ where: { email: payload.identifier } })
-      : await this.prisma.member.findUnique({ where: { phone: payload.identifier } });
+      : await this.prisma.member.findFirst({ where: { phone: payload.identifier } });
 
     if (!member || !member.passwordHash || !member.isActive) {
       throw new UnauthorizedException("อีเมล/เบอร์โทร หรือรหัสผ่านไม่ถูกต้อง");
