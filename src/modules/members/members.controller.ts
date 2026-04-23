@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, PartialType, ApiTags } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsBoolean, IsEmail, IsInt, IsOptional, IsString } from "class-validator";
+import { IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString } from "class-validator";
 
 import { MembersService } from "./members.service";
 
@@ -24,6 +24,11 @@ class CreateMemberDto {
   @IsOptional()
   @IsString()
   referredById?: string;
+
+  @ApiPropertyOptional({ enum: ["REGULAR", "SALON"], example: "REGULAR" })
+  @IsOptional()
+  @IsEnum(["REGULAR", "SALON"])
+  memberType?: "REGULAR" | "SALON";
 }
 
 class UpdateMemberDto extends PartialType(CreateMemberDto) {}

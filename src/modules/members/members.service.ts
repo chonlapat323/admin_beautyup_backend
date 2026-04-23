@@ -111,6 +111,7 @@ export class MembersService {
       phone?: string;
       email?: string;
       referredById?: string;
+      memberType?: "REGULAR" | "SALON";
     },
   ) {
     await this.findOne(id);

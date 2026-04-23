@@ -88,6 +88,19 @@ model AdminUser {
   updatedAt    DateTime  @updatedAt
 }
 
+model SalonCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  description String?
+  usageLimit  Int?
+  usedCount   Int       @default(0)
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  members     Member[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
 model Member {
   id                   String          @id @default(cuid())
   email                String?         @unique
@@ -101,6 +114,8 @@ model Member {
   referredById         String?
   referredBy           Member?         @relation("MemberReferral", fields: [referredById], references: [id])
   referrals            Member[]        @relation("MemberReferral")
+  salonCodeId          String?
+  salonCode            SalonCode?      @relation(fields: [salonCodeId], references: [id])
   storeId              String?
   store                Store?          @relation(fields: [storeId], references: [id])
   addresses            MemberAddress[]

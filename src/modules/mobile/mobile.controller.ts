@@ -10,6 +10,7 @@ class RegisterDto {
   @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
   @ApiProperty() @IsString() @MinLength(6) password!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() referralCode?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() salonCode?: string;
 }
 
 class LoginDto {

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes } from "crypto";
 import { CommissionService } from "../commission/commission.service";
+import { SalonCodesService } from "../salon-codes/salon-codes.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 function hashPassword(password: string): string {
@@ -34,6 +35,7 @@ export class MobileService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly commissionService: CommissionService,
+    private readonly salonCodesService: SalonCodesService,
   ) {}
 
   async register(payload: {
@@ -42,6 +44,7 @@ export class MobileService {
     phone?: string;
     password: string;
     referralCode?: string;
+    salonCode?: string;
   }) {
     if (!payload.email && !payload.phone) {
       throw new BadRequestException("กรุณากรอกอีเมลหรือเบอร์โทร");
@@ -64,6 +67,15 @@ export class MobileService {
       if (referrer) referredById = referrer.id;
     }
 
+    let salonCodeId: string | undefined;
+    let memberType: "REGULAR" | "SALON" = "REGULAR";
+    if (payload.salonCode) {
+      const sc = await this.salonCodesService.validate(payload.salonCode);
+      if (!sc) throw new BadRequestException("Salon Code ไม่ถูกต้องหรือหมดอายุแล้ว");
+      salonCodeId = sc.id;
+      memberType = "SALON";
+    }
+
     const myReferralCode = await makeReferralCode(this.prisma);
 
     const member = await this.prisma.member.create({
@@ -74,8 +86,14 @@ export class MobileService {
         passwordHash: hashPassword(payload.password),
         referredById,
         referralCode: myReferralCode,
+        memberType,
+        salonCodeId,
       },
     });
+
+    if (salonCodeId) {
+      await this.salonCodesService.incrementUsed(salonCodeId);
+    }
 
     const token = generateToken();
     await this.prisma.memberSession.create({ data: { memberId: member.id, token } });
