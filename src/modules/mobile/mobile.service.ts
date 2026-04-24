@@ -228,12 +228,18 @@ export class MobileService {
     province?: string | null;
     postalCode?: string | null;
   }): void {
+    this.logger.debug(`[syncAddress] START memberId=${memberId}`);
+    this.logger.debug(`[syncAddress] address=${JSON.stringify(address)}`);
     this.prisma.member.findUnique({ where: { id: memberId }, select: { flowAccountContactId: true } })
       .then((m) => {
-        if (!m?.flowAccountContactId) return;
+        this.logger.debug(`[syncAddress] flowAccountContactId=${m?.flowAccountContactId ?? 'null'}`);
+        if (!m?.flowAccountContactId) {
+          this.logger.warn(`[syncAddress] skipped — member has no flowAccountContactId`);
+          return;
+        }
         return this.flowAccountService.updateContactAddress(m.flowAccountContactId, address);
       })
-      .catch((err) => this.logger.error(`FlowAccount address sync failed for member ${memberId}`, err));
+      .catch((err) => this.logger.error(`[syncAddress] FAILED for member ${memberId}: ${String(err)}`));
   }
 
   async listAddresses(memberId: string) {
