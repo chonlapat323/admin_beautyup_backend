@@ -121,6 +121,7 @@ export class ProductsService {
     stock?: number;
     status?: ProductStatus;
     isFeatured?: boolean;
+    tag?: string;
     tempFiles?: string[];
   }) {
     const product = await this.prisma.product.create({
@@ -136,6 +137,7 @@ export class ProductsService {
         stock: payload.stock ?? 0,
         status: payload.status ?? ProductStatus.DRAFT,
         isFeatured: payload.isFeatured ?? false,
+        tag: payload.tag ?? null,
       },
     });
 
@@ -180,6 +182,7 @@ export class ProductsService {
       stock?: number;
       status?: ProductStatus;
       isFeatured?: boolean;
+      tag?: string | null;
       orderedImages?: OrderedImageItem[];
     },
   ) {
@@ -199,6 +202,7 @@ export class ProductsService {
         stock: payload.stock,
         status: payload.status,
         isFeatured: payload.isFeatured,
+        tag: payload.tag,
       },
     });
 

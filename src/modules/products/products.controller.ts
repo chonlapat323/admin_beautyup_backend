@@ -110,6 +110,11 @@ class CreateProductDto {
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  tag?: string;
 }
 
 class UpdateProductDto {
@@ -175,6 +180,11 @@ class UpdateProductDto {
   @IsOptional()
   @IsBoolean()
   isFeatured?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  tag?: string | null;
 }
 
 class UpdateProductStatusDto {
