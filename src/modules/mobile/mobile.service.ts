@@ -234,14 +234,14 @@ export class MobileService {
   }): void {
     this.logger.debug(`[syncAddress] START memberId=${memberId}`);
     this.logger.debug(`[syncAddress] address=${JSON.stringify(address)}`);
-    this.prisma.member.findUnique({ where: { id: memberId }, select: { flowAccountContactId: true, fullName: true } })
+    this.prisma.member.findUnique({ where: { id: memberId }, select: { flowAccountContactId: true, fullName: true, email: true, phone: true } })
       .then((m) => {
         this.logger.debug(`[syncAddress] flowAccountContactId=${m?.flowAccountContactId ?? 'null'}`);
         if (!m?.flowAccountContactId) {
           this.logger.warn(`[syncAddress] skipped — member has no flowAccountContactId`);
           return;
         }
-        return this.flowAccountService.updateContactAddress(m.flowAccountContactId, m.fullName, address);
+        return this.flowAccountService.updateContactAddress(m.flowAccountContactId, m.fullName, m.email, m.phone, address);
       })
       .catch((err) => this.logger.error(`[syncAddress] FAILED for member ${memberId}: ${String(err)}`));
   }

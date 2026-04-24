@@ -26,10 +26,10 @@ export class MembersService {
     province?: string | null;
     postalCode?: string | null;
   }): void {
-    this.prisma.member.findUnique({ where: { id: memberId }, select: { flowAccountContactId: true, fullName: true } })
+    this.prisma.member.findUnique({ where: { id: memberId }, select: { flowAccountContactId: true, fullName: true, email: true, phone: true } })
       .then((m) => {
         if (!m?.flowAccountContactId) return;
-        return this.flowAccount.updateContactAddress(m.flowAccountContactId, m.fullName, address);
+        return this.flowAccount.updateContactAddress(m.flowAccountContactId, m.fullName, m.email, m.phone, address);
       })
       .catch((err) => this.logger.error(`[syncAddress] FAILED for member ${memberId}: ${String(err)}`));
   }

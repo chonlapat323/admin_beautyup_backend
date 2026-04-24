@@ -235,6 +235,8 @@ export class FlowAccountService {
   async updateContactAddress(
     contactId: number,
     fullName: string,
+    email: string | null,
+    phone: string | null,
     address: {
       addressLine1: string;
       addressLine2?: string | null;
@@ -260,6 +262,8 @@ export class FlowAccountService {
         contactGroup: 1,
         contactType: 3,
         contactBranch: 'สำนักงานใหญ่',
+        contactEmail: email ?? '',
+        contactMobile: phone ?? '',
         contactAddress: addressParts,
         contactZipCode: address.postalCode ?? '',
         conatactShippingAddress: addressParts,
