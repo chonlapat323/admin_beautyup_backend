@@ -135,6 +135,7 @@ export class FlowAccountService {
 
   async updateContactAddress(
     contactId: number,
+    fullName: string,
     address: {
       addressLine1: string;
       addressLine2?: string | null;
@@ -155,6 +156,8 @@ export class FlowAccountService {
       ].filter(Boolean).join(' ');
 
       const payload = {
+        contactName: fullName,
+        contactPerson: fullName,
         contactAddress: addressParts,
         contactZipCode: address.postalCode ?? '',
         conatactShippingAddress: addressParts,
