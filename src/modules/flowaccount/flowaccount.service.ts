@@ -83,6 +83,7 @@ export class FlowAccountService {
       const contactUrl = `${this.baseUrl}/contacts`;
       const payload = {
         contactName: member.fullName,
+        contactPerson: member.fullName,
         contactEmail: member.email ?? '',
         contactMobile: member.phone ?? '',
         contactBranch: 'สำนักงานใหญ่',
