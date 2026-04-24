@@ -65,8 +65,8 @@ export class FlowAccountService {
           contactEmail: member.email ?? "",
           contactMobile: member.phone ?? "",
           contactBranch: "สำนักงานใหญ่",
-          contactType: "0",
-          contactGroup: "1",
+          contactType: 1,
+          contactGroup: 1,
         }),
       });
 
