@@ -151,8 +151,8 @@ export class FlowAccountService {
       const addressParts = [
         address.addressLine1,
         address.addressLine2,
-        address.district,
-        address.province,
+        address.district ? `อ.${address.district}` : null,
+        address.province ? `จ.${address.province}` : null,
       ].filter(Boolean).join(' ');
 
       const payload = {
