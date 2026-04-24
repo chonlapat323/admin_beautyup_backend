@@ -87,6 +87,7 @@ export class FlowAccountService {
         contactMobile: member.phone ?? '',
         contactBranch: 'สำนักงานใหญ่',
         contactGroup: 1,
+        contactType: 3,
       };
 
       this.logger.debug(`[createContact] POST ${contactUrl}`);
