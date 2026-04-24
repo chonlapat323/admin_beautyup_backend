@@ -161,6 +161,7 @@ export class FlowAccountService {
         contactAddress: addressParts,
         contactZipCode: address.postalCode ?? '',
         conatactShippingAddress: addressParts,
+        contactShippingAddress: addressParts,
       };
 
       this.logger.debug(`[updateContactAddress] payload: ${JSON.stringify(payload)}`);
