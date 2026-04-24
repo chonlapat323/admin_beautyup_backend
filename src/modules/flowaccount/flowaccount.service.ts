@@ -132,4 +132,53 @@ export class FlowAccountService {
       return null;
     }
   }
+
+  async updateContactAddress(
+    contactId: number,
+    address: {
+      addressLine1: string;
+      addressLine2?: string | null;
+      district?: string | null;
+      province?: string | null;
+      postalCode?: string | null;
+    },
+  ): Promise<void> {
+    try {
+      this.logger.debug(`[updateContactAddress] contactId=${contactId}`);
+      const token = await this.getToken();
+
+      const addressParts = [
+        address.addressLine1,
+        address.addressLine2,
+        address.district,
+        address.province,
+      ].filter(Boolean).join(' ');
+
+      const payload = {
+        contactAddress: addressParts,
+        contactZipCode: address.postalCode ?? '',
+        conatactShippingAddress: addressParts,
+      };
+
+      this.logger.debug(`[updateContactAddress] payload: ${JSON.stringify(payload)}`);
+
+      const res = await fetch(`${this.baseUrl}/contacts/${contactId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const rawBody = await res.text();
+      if (!res.ok) {
+        this.logger.warn(`[updateContactAddress] FAILED (${res.status}): ${rawBody}`);
+        return;
+      }
+      this.logger.log(`[updateContactAddress] SUCCESS contactId=${contactId}`);
+    } catch (error) {
+      this.logger.error(`[updateContactAddress] EXCEPTION: ${String(error)}`);
+    }
+  }
 }
