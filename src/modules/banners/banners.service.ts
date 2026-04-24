@@ -42,6 +42,7 @@ export class BannersService {
     eyebrow: string;
     title: string;
     body?: string;
+    tag?: string;
     buttonLabel?: string;
     linkType?: string;
     linkId?: string;
@@ -53,6 +54,7 @@ export class BannersService {
         eyebrow: payload.eyebrow,
         title: payload.title,
         body: payload.body,
+        tag: payload.tag ?? null,
         buttonLabel: payload.buttonLabel ?? "Shop Now",
         linkType: payload.linkType ?? "none",
         linkId: payload.linkId ?? null,
@@ -67,6 +69,7 @@ export class BannersService {
       eyebrow?: string;
       title?: string;
       body?: string;
+      tag?: string | null;
       buttonLabel?: string;
       linkType?: string;
       linkId?: string | null;

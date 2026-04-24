@@ -24,6 +24,7 @@ class CreateBannerDto {
   @ApiProperty() @IsString() eyebrow!: string;
   @ApiProperty() @IsString() title!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() body?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tag?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() buttonLabel?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() linkType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() linkId?: string;
@@ -35,6 +36,7 @@ class UpdateBannerDto {
   @ApiPropertyOptional() @IsOptional() @IsString() eyebrow?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() title?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() body?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tag?: string | null;
   @ApiPropertyOptional() @IsOptional() @IsString() buttonLabel?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() linkType?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() linkId?: string | null;

@@ -37,6 +37,7 @@ model Banner {
   eyebrow     String
   title       String
   body        String?
+  tag         String?
   buttonLabel String   @default("Shop Now")
   imageUrl    String?
   linkType    String   @default("none")
