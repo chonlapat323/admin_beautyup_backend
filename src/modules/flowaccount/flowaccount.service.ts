@@ -158,6 +158,9 @@ export class FlowAccountService {
       const payload = {
         contactName: fullName,
         contactPerson: fullName,
+        contactGroup: 1,
+        contactType: 3,
+        contactBranch: 'สำนักงานใหญ่',
         contactAddress: addressParts,
         contactZipCode: address.postalCode ?? '',
         conatactShippingAddress: addressParts,
