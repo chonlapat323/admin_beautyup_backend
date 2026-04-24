@@ -209,12 +209,13 @@ model Product {
   category      Category       @relation(fields: [categoryId], references: [id])
   shadeId       String?
   shade         Shade?         @relation(fields: [shadeId], references: [id])
-  storeId       String?
-  store         Store?         @relation(fields: [storeId], references: [id])
-  images        ProductImage[]
-  orderItems    OrderItem[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  storeId           String?
+  store             Store?         @relation(fields: [storeId], references: [id])
+  flowAccountItemId String?
+  images            ProductImage[]
+  orderItems        OrderItem[]
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 }
 
 model ProductImage {

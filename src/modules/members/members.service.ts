@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -12,10 +12,27 @@ type MemberListParams = {
 
 @Injectable()
 export class MembersService {
+  private readonly logger = new Logger(MembersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly flowAccount: FlowAccountService,
   ) {}
+
+  private syncDefaultAddressToFlowAccount(memberId: string, address: {
+    addressLine1: string;
+    addressLine2?: string | null;
+    district?: string | null;
+    province?: string | null;
+    postalCode?: string | null;
+  }): void {
+    this.prisma.member.findUnique({ where: { id: memberId }, select: { flowAccountContactId: true, fullName: true } })
+      .then((m) => {
+        if (!m?.flowAccountContactId) return;
+        return this.flowAccount.updateContactAddress(m.flowAccountContactId, m.fullName, address);
+      })
+      .catch((err) => this.logger.error(`[syncAddress] FAILED for member ${memberId}: ${String(err)}`));
+  }
 
   async findAll(params: MemberListParams) {
     const where: Prisma.MemberWhereInput = {};
@@ -164,9 +181,12 @@ export class MembersService {
       await this.prisma.memberAddress.updateMany({ where: { memberId }, data: { isDefault: false } });
     }
     const isFirst = (await this.prisma.memberAddress.count({ where: { memberId } })) === 0;
-    return this.prisma.memberAddress.create({
-      data: { ...payload, memberId, isDefault: payload.isDefault ?? isFirst },
+    const isDefault = payload.isDefault ?? isFirst;
+    const created = await this.prisma.memberAddress.create({
+      data: { ...payload, memberId, isDefault },
     });
+    if (isDefault) this.syncDefaultAddressToFlowAccount(memberId, created);
+    return created;
   }
 
   async updateAddress(
@@ -189,7 +209,9 @@ export class MembersService {
     if (payload.isDefault) {
       await this.prisma.memberAddress.updateMany({ where: { memberId }, data: { isDefault: false } });
     }
-    return this.prisma.memberAddress.update({ where: { id: addressId }, data: payload });
+    const updated = await this.prisma.memberAddress.update({ where: { id: addressId }, data: payload });
+    if (updated.isDefault) this.syncDefaultAddressToFlowAccount(memberId, updated);
+    return updated;
   }
 
   async deleteAddress(memberId: string, addressId: string) {
@@ -207,7 +229,9 @@ export class MembersService {
     const addr = await this.prisma.memberAddress.findFirst({ where: { id: addressId, memberId } });
     if (!addr) throw new NotFoundException("ไม่พบที่อยู่");
     await this.prisma.memberAddress.updateMany({ where: { memberId }, data: { isDefault: false } });
-    return this.prisma.memberAddress.update({ where: { id: addressId }, data: { isDefault: true } });
+    const updated = await this.prisma.memberAddress.update({ where: { id: addressId }, data: { isDefault: true } });
+    this.syncDefaultAddressToFlowAccount(memberId, updated);
+    return updated;
   }
 
   async remove(id: string) {

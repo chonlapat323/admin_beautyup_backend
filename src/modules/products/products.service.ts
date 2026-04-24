@@ -1,8 +1,9 @@
 import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
 import { join } from "path";
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma, ProductStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { FlowAccountService } from "../flowaccount/flowaccount.service";
 
 type ProductListParams = {
   search?: string;
@@ -22,7 +23,12 @@ const IMAGE_INCLUDE = { images: { orderBy: { sortOrder: "asc" } } } as const;
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ProductsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly flowAccountService: FlowAccountService,
+  ) {}
 
   private get appUrl(): string {
     return process.env.APP_URL || `http://localhost:${process.env.PORT ?? 3000}`;
@@ -124,6 +130,10 @@ export class ProductsService {
     tag?: string;
     tempFiles?: string[];
   }) {
+    const stock = payload.stock ?? 0;
+    const reserveStock = Math.ceil(stock * 0.1);
+    const sellableStock = stock - reserveStock;
+
     const product = await this.prisma.product.create({
       data: {
         sku: payload.sku,
@@ -134,7 +144,9 @@ export class ProductsService {
         specialPrice: payload.specialPrice ?? null,
         categoryId: payload.categoryId,
         shadeId: payload.shadeId ?? null,
-        stock: payload.stock ?? 0,
+        stock,
+        reserveStock,
+        sellableStock,
         status: payload.status ?? ProductStatus.DRAFT,
         isFeatured: payload.isFeatured ?? false,
         tag: payload.tag ?? null,
@@ -151,7 +163,27 @@ export class ProductsService {
       }
     }
 
-    return this.findOne(product.id);
+    const created = await this.findOne(product.id);
+
+    // sync to FlowAccount in background — failure does not block create
+    this.flowAccountService.createItem({
+      sku: created.sku,
+      name: created.name,
+      price: Number(created.specialPrice ?? created.price),
+      stock: created.stock,
+      categoryName: created.category?.name ?? null,
+    }).then(async (itemId) => {
+      if (!itemId) return;
+      this.logger.log(`FlowAccount item created: ${itemId} for product ${created.id}`);
+      await this.prisma.product.update({
+        where: { id: created.id },
+        data: { flowAccountItemId: itemId },
+      });
+    }).catch((err) => {
+      this.logger.error(`FlowAccount item sync failed for product ${created.id}`, err);
+    });
+
+    return created;
   }
 
   async findOne(id: string) {
@@ -188,6 +220,15 @@ export class ProductsService {
   ) {
     await this.findOne(id);
 
+    const stockFields =
+      payload.stock !== undefined
+        ? {
+            stock: payload.stock,
+            reserveStock: Math.ceil(payload.stock * 0.1),
+            sellableStock: payload.stock - Math.ceil(payload.stock * 0.1),
+          }
+        : {};
+
     await this.prisma.product.update({
       where: { id },
       data: {
@@ -199,10 +240,10 @@ export class ProductsService {
         specialPrice: payload.specialPrice,
         categoryId: payload.categoryId,
         shadeId: payload.shadeId,
-        stock: payload.stock,
         status: payload.status,
         isFeatured: payload.isFeatured,
         tag: payload.tag,
+        ...stockFields,
       },
     });
 
@@ -210,7 +251,20 @@ export class ProductsService {
       await this.applyOrderedImages(id, payload.orderedImages);
     }
 
-    return this.findOne(id);
+    const updated = await this.findOne(id);
+
+    if (updated.flowAccountItemId) {
+      this.flowAccountService.updateItem(updated.flowAccountItemId, {
+        sku: updated.sku,
+        name: updated.name,
+        price: Number(updated.specialPrice ?? updated.price),
+        categoryName: updated.category?.name ?? null,
+      }).catch((err) => {
+        this.logger.error(`FlowAccount item update failed for product ${updated.id}`, err);
+      });
+    }
+
+    return updated;
   }
 
   private async applyOrderedImages(productId: string, ordered: OrderedImageItem[]) {

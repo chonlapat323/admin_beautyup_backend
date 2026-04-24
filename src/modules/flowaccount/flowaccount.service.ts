@@ -133,6 +133,105 @@ export class FlowAccountService {
     }
   }
 
+  async createItem(product: {
+    sku: string;
+    name: string;
+    price: number;
+    stock: number;
+    categoryName?: string | null;
+  }): Promise<string | null> {
+    try {
+      this.logger.debug(`[createItem] START sku=${product.sku}`);
+      const token = await this.getToken();
+
+      const today = new Date().toISOString().slice(0, 10);
+      const payload = {
+        type: 5,
+        code: product.sku,
+        name: product.name,
+        sellPrice: product.price,
+        sellVatType: 3,
+        inventoryPublishedOn: today,
+        inventoryQuantity: product.stock,
+        inventoryPrice: 0,
+        ...(product.categoryName ? { categoryName: product.categoryName } : {}),
+      };
+
+      this.logger.debug(`[createItem] payload: ${JSON.stringify(payload)}`);
+
+      const res = await fetch(`${this.baseUrl}/products`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const rawBody = await res.text();
+      this.logger.debug(`[createItem] status=${res.status} body=${rawBody}`);
+
+      if (!res.ok) {
+        this.logger.warn(`[createItem] FAILED (${res.status}): ${rawBody}`);
+        return null;
+      }
+
+      const data = JSON.parse(rawBody) as {
+        data?: { list?: { id?: string }[] };
+      };
+      const itemId = data?.data?.list?.[0]?.id ?? null;
+      this.logger.log(`[createItem] SUCCESS itemId=${itemId}`);
+      return itemId;
+    } catch (error) {
+      this.logger.error(`[createItem] EXCEPTION: ${String(error)}`);
+      return null;
+    }
+  }
+
+  async updateItem(
+    itemId: string,
+    product: {
+      sku: string;
+      name: string;
+      price: number;
+      categoryName?: string | null;
+    },
+  ): Promise<void> {
+    try {
+      this.logger.debug(`[updateItem] itemId=${itemId} sku=${product.sku}`);
+      const token = await this.getToken();
+
+      const payload = {
+        type: 5,
+        code: product.sku,
+        name: product.name,
+        sellPrice: product.price,
+        sellVatType: 3,
+        ...(product.categoryName ? { categoryName: product.categoryName } : {}),
+      };
+
+      this.logger.debug(`[updateItem] payload: ${JSON.stringify(payload)}`);
+
+      const res = await fetch(`${this.baseUrl}/products/${itemId}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const rawBody = await res.text();
+      if (!res.ok) {
+        this.logger.warn(`[updateItem] FAILED (${res.status}): ${rawBody}`);
+        return;
+      }
+      this.logger.log(`[updateItem] SUCCESS itemId=${itemId}`);
+    } catch (error) {
+      this.logger.error(`[updateItem] EXCEPTION: ${String(error)}`);
+    }
+  }
+
   async updateContactAddress(
     contactId: number,
     fullName: string,

@@ -162,6 +162,13 @@ export class MobileService {
       throw new BadRequestException("พบสินค้าที่ไม่พร้อมขาย");
     }
 
+    for (const item of payload.items) {
+      const product = products.find((p) => p.id === item.productId)!;
+      if (product.sellableStock < item.quantity) {
+        throw new BadRequestException(`สินค้า "${product.name}" มีจำนวนไม่เพียงพอ`);
+      }
+    }
+
     const orderItems = payload.items.map((item) => {
       const product = products.find((p) => p.id === item.productId)!;
       const unitPrice = Number(product.specialPrice ?? product.price);
@@ -198,10 +205,7 @@ export class MobileService {
       ...orderItems.map((item) =>
         this.prisma.product.update({
           where: { id: item.productId },
-          data: {
-            stock: { decrement: item.quantity },
-            sellableStock: { decrement: item.quantity },
-          },
+          data: { sellableStock: { decrement: item.quantity } },
         }),
       ),
     ]);
