@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
 import { join } from "path";
-import { Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma, ProductStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
@@ -311,7 +311,11 @@ export class ProductsService {
   async remove(id: string) {
     const product = await this.findOne(id);
 
-    // Delete image files from disk before removing from DB
+    const orderCount = await this.prisma.orderItem.count({ where: { productId: id } });
+    if (orderCount > 0) {
+      throw new BadRequestException("ไม่สามารถลบสินค้าที่มีคำสั่งซื้อแล้วได้");
+    }
+
     for (const img of product.images) {
       this.deleteProductImageFile(img.url);
     }
