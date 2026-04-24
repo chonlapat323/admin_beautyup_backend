@@ -94,7 +94,7 @@ export class ProductsService {
         include: {
           category: { select: { id: true, name: true } },
           shade: { select: { id: true, name: true } },
-          images: { orderBy: { sortOrder: "asc" }, take: 1 },
+          images: { orderBy: { sortOrder: "asc" } },
         },
       }),
       this.prisma.product.count({ where }),
