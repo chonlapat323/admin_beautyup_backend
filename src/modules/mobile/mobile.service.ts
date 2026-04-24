@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes } from "crypto";
+import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { CommissionService } from "../commission/commission.service";
 import { SalonCodesService } from "../salon-codes/salon-codes.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -32,10 +33,13 @@ async function makeReferralCode(prisma: PrismaService): Promise<string> {
 
 @Injectable()
 export class MobileService {
+  private readonly logger = new Logger(MobileService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly commissionService: CommissionService,
     private readonly salonCodesService: SalonCodesService,
+    private readonly flowAccountService: FlowAccountService,
   ) {}
 
   async register(payload: {
@@ -97,6 +101,17 @@ export class MobileService {
 
     const token = generateToken();
     await this.prisma.memberSession.create({ data: { memberId: member.id, token } });
+
+    // sync to FlowAccount in background — failure does not block registration
+    this.flowAccountService.createContact({
+      fullName: member.fullName,
+      email: member.email,
+      phone: member.phone,
+    }).then((contactId) => {
+      if (contactId) this.logger.log(`FlowAccount contact created: ${contactId} for member ${member.id}`);
+    }).catch((err) => {
+      this.logger.error(`FlowAccount sync failed for member ${member.id}`, err);
+    });
 
     return { token, member: this.safeProfile(member) };
   }

@@ -25,6 +25,7 @@ export class FlowAccountService {
         grant_type: "client_credentials",
         client_id: this.clientId,
         client_secret: this.clientSecret,
+        scope: "flowaccount-api",
       }),
     });
 
