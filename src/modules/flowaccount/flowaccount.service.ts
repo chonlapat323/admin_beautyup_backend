@@ -65,6 +65,8 @@ export class FlowAccountService {
           contactEmail: member.email ?? "",
           contactMobile: member.phone ?? "",
           contactBranch: "สำนักงานใหญ่",
+          contactType: "0",
+          contactGroup: "1",
         }),
       });
 
@@ -74,8 +76,8 @@ export class FlowAccountService {
         return null;
       }
 
-      const data = (await res.json()) as { data?: { id?: number } };
-      return data?.data?.id ?? null;
+      const data = (await res.json()) as { data?: { list?: { id?: number }[] }; status?: boolean };
+      return data?.data?.list?.[0]?.id ?? null;
     } catch (error) {
       this.logger.error("FlowAccount createContact error", error);
       return null;
