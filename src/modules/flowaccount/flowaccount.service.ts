@@ -8,7 +8,8 @@ type TokenCache = {
 @Injectable()
 export class FlowAccountService {
   private readonly logger = new Logger(FlowAccountService.name);
-  private readonly baseUrl = process.env.FLOWACCOUNT_BASE_URL ?? "https://openapi.flowaccount.com/v1";
+  private readonly tokenUrl = process.env.FLOWACCOUNT_TOKEN_URL ?? "https://openapi.flowaccount.com/test/token";
+  private readonly baseUrl = process.env.FLOWACCOUNT_BASE_URL ?? "https://openapi.flowaccount.com/test";
   private readonly clientId = process.env.FLOWACCOUNT_CLIENT_ID ?? "";
   private readonly clientSecret = process.env.FLOWACCOUNT_CLIENT_SECRET ?? "";
   private tokenCache: TokenCache | null = null;
@@ -18,7 +19,8 @@ export class FlowAccountService {
       return this.tokenCache.accessToken;
     }
 
-    const res = await fetch(`${this.baseUrl}/token`, {
+    this.logger.debug(`Requesting token from: ${this.tokenUrl}`);
+    const res = await fetch(this.tokenUrl, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -68,7 +70,7 @@ export class FlowAccountService {
 
       if (!res.ok) {
         const err = await res.text();
-        this.logger.warn(`FlowAccount createContact failed (${res.status}): ${err}`);
+        this.logger.warn(`FlowAccount createContact failed (${res.status}) url=${this.baseUrl}/contacts body=${err}`);
         return null;
       }
 
