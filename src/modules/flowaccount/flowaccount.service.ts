@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from '@nestjs/common';
 
 type TokenCache = {
   accessToken: string;
@@ -8,36 +8,59 @@ type TokenCache = {
 @Injectable()
 export class FlowAccountService {
   private readonly logger = new Logger(FlowAccountService.name);
-  private readonly tokenUrl = process.env.FLOWACCOUNT_TOKEN_URL ?? "https://openapi.flowaccount.com/test/token";
-  private readonly baseUrl = process.env.FLOWACCOUNT_BASE_URL ?? "https://openapi.flowaccount.com/test";
-  private readonly clientId = process.env.FLOWACCOUNT_CLIENT_ID ?? "";
-  private readonly clientSecret = process.env.FLOWACCOUNT_CLIENT_SECRET ?? "";
+  private readonly tokenUrl =
+    process.env.FLOWACCOUNT_TOKEN_URL ??
+    'https://openapi.flowaccount.com/test/token';
+  private readonly baseUrl =
+    process.env.FLOWACCOUNT_BASE_URL ?? 'https://openapi.flowaccount.com/test';
+  private readonly clientId = process.env.FLOWACCOUNT_CLIENT_ID ?? '';
+  private readonly clientSecret = process.env.FLOWACCOUNT_CLIENT_SECRET ?? '';
   private tokenCache: TokenCache | null = null;
 
   private async getToken(): Promise<string> {
     if (this.tokenCache && Date.now() < this.tokenCache.expiresAt) {
+      this.logger.debug('[getToken] Using cached token');
       return this.tokenCache.accessToken;
     }
 
-    this.logger.debug(`Requesting token from: ${this.tokenUrl}`);
-    const res = await fetch(this.tokenUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: this.clientId,
-        client_secret: this.clientSecret,
-        scope: "flowaccount-api",
-      }),
-    });
+    this.logger.debug(`[getToken] Requesting new token from: ${this.tokenUrl}`);
+    this.logger.debug(`[getToken] client_id: ${this.clientId}`);
 
-    if (!res.ok) {
-      throw new Error(`FlowAccount token error: ${res.status}`);
+    let res: Response;
+    try {
+      res = await fetch(this.tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'client_credentials',
+          client_id: this.clientId,
+          client_secret: this.clientSecret,
+          scope: 'flowaccount-api',
+        }),
+      });
+    } catch (fetchErr) {
+      this.logger.error(
+        `[getToken] fetch failed (network error): ${String(fetchErr)}`,
+      );
+      throw fetchErr;
     }
 
-    const data = (await res.json()) as { access_token: string; expires_in: number };
+    this.logger.debug(`[getToken] response status: ${res.status}`);
+    const rawBody = await res.text();
+    this.logger.debug(`[getToken] response body: ${rawBody}`);
 
-    // refresh 5 minutes before actual expiry
+    if (!res.ok) {
+      throw new Error(`FlowAccount token error: ${res.status} ${rawBody}`);
+    }
+
+    const data = JSON.parse(rawBody) as {
+      access_token: string;
+      expires_in: number;
+    };
+    this.logger.debug(
+      `[getToken] token obtained, expires_in: ${data.expires_in}s`,
+    );
+
     this.tokenCache = {
       accessToken: data.access_token,
       expiresAt: Date.now() + (data.expires_in - 300) * 1000,
@@ -52,34 +75,59 @@ export class FlowAccountService {
     phone?: string | null;
   }): Promise<number | null> {
     try {
+      this.logger.debug(`[createContact] START for member: ${member.fullName}`);
+
       const token = await this.getToken();
+      this.logger.debug('[createContact] token ready');
 
-      const res = await fetch(`${this.baseUrl}/contacts`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contactName: member.fullName,
-          contactEmail: member.email ?? "",
-          contactMobile: member.phone ?? "",
-          contactBranch: "สำนักงานใหญ่",
-          contactType: 1,
-          contactGroup: 1,
-        }),
-      });
+      const contactUrl = `${this.baseUrl}/contacts`;
+      const payload = {
+        contactName: member.fullName,
+        contactEmail: member.email ?? '',
+        contactMobile: member.phone ?? '',
+        contactBranch: 'สำนักงานใหญ่',
+        contactType: 1,
+        contactGroup: 1,
+      };
 
-      if (!res.ok) {
-        const err = await res.text();
-        this.logger.warn(`FlowAccount createContact failed (${res.status}) url=${this.baseUrl}/contacts body=${err}`);
+      this.logger.debug(`[createContact] POST ${contactUrl}`);
+      this.logger.debug(`[createContact] payload: ${JSON.stringify(payload)}`);
+
+      let res: Response;
+      try {
+        res = await fetch(contactUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+      } catch (fetchErr) {
+        this.logger.error(
+          `[createContact] fetch failed (network error): ${String(fetchErr)}`,
+        );
         return null;
       }
 
-      const data = (await res.json()) as { data?: { list?: { id?: number }[] }; status?: boolean };
-      return data?.data?.list?.[0]?.id ?? null;
+      this.logger.debug(`[createContact] response status: ${res.status}`);
+      const rawBody = await res.text();
+      this.logger.debug(`[createContact] response body: ${rawBody}`);
+
+      if (!res.ok) {
+        this.logger.warn(`[createContact] FAILED (${res.status}): ${rawBody}`);
+        return null;
+      }
+
+      const data = JSON.parse(rawBody) as {
+        data?: { list?: { id?: number }[] };
+        status?: boolean;
+      };
+      const contactId = data?.data?.list?.[0]?.id ?? null;
+      this.logger.log(`[createContact] SUCCESS contactId=${contactId}`);
+      return contactId;
     } catch (error) {
-      this.logger.error("FlowAccount createContact error", error);
+      this.logger.error(`[createContact] EXCEPTION: ${String(error)}`);
       return null;
     }
   }
