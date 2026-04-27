@@ -57,6 +57,8 @@ class CheckoutDto {
   @ApiProperty() @IsString() shippingName!: string;
   @ApiProperty() @IsString() shippingPhone!: string;
   @ApiProperty() @IsString() shippingAddr!: string;
+  @ApiProperty({ description: "Omise card token from client-side tokenization" })
+  @IsString() omiseToken!: string;
 }
 
 @ApiTags("Mobile")

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes } from "crypto";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
+import { OmiseService } from "../omise/omise.service";
 import { CommissionService } from "../commission/commission.service";
 import { SalonCodesService } from "../salon-codes/salon-codes.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -40,6 +41,7 @@ export class MobileService {
     private readonly commissionService: CommissionService,
     private readonly salonCodesService: SalonCodesService,
     private readonly flowAccountService: FlowAccountService,
+    private readonly omiseService: OmiseService,
   ) {}
 
   async register(payload: {
@@ -152,6 +154,7 @@ export class MobileService {
     shippingName: string;
     shippingPhone: string;
     shippingAddr: string;
+    omiseToken: string;
   }) {
     const productIds = payload.items.map((i) => i.productId);
     const products = await this.prisma.product.findMany({
@@ -186,6 +189,19 @@ export class MobileService {
     const shippingAmount = 0;
     const totalAmount = subtotal + shippingAmount;
 
+    // ── Charge via Omise (throws on failure — order is NOT created) ─────────────
+    const charge = await this.omiseService.createCharge({
+      token: payload.omiseToken,
+      amountTHB: totalAmount,
+      description: `Beauty Up order for ${payload.shippingName}`,
+    });
+
+    if (charge.status !== "successful") {
+      throw new BadRequestException(
+        charge.failure_message ?? "การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      );
+    }
+
     const [order] = await this.prisma.$transaction([
       this.prisma.order.create({
         data: {
@@ -198,6 +214,7 @@ export class MobileService {
           shippingName: payload.shippingName,
           shippingPhone: payload.shippingPhone,
           shippingAddr: payload.shippingAddr,
+          chargeId: charge.id,
           items: { create: orderItems },
         },
         include: { items: true },

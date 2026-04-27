@@ -245,6 +245,7 @@ model Order {
   shippingName   String?
   shippingPhone  String?
   shippingAddr   String?
+  chargeId       String?
   items          OrderItem[]
   commissions    Commission[]
   statusLogs     OrderStatusLog[]
