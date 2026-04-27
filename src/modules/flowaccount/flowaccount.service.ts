@@ -278,8 +278,8 @@ export class FlowAccountService {
         })),
       };
 
-      this.logger.debug(`[createReceipt] POST /cash-invoices/with-payment`);
-      const res = await fetch(`${this.baseUrl}/cash-invoices/with-payment`, {
+      this.logger.debug(`[createReceipt] POST /tax-invoices/with-payment`);
+      const res = await fetch(`${this.baseUrl}/tax-invoices/with-payment`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -308,7 +308,7 @@ export class FlowAccountService {
       this.logger.debug(`[getDocumentShareLink] documentId=${documentId}`);
       const token = await this.getToken();
 
-      const res = await fetch(`${this.baseUrl}/cash-invoices/sharedocument`, {
+      const res = await fetch(`${this.baseUrl}/tax-invoices/sharedocument`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId, culture: 'th' }),
