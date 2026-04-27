@@ -311,7 +311,7 @@ export class FlowAccountService {
       const res = await fetch(`${this.baseUrl}/tax-invoices/sharedocument`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId, culture: 'th' }),
+        body: JSON.stringify({ documentId, culture: 'th', copies: 0 }),
       });
 
       const rawBody = await res.text();
