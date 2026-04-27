@@ -190,11 +190,18 @@ export class MobileService {
     const totalAmount = subtotal + shippingAmount;
 
     // ── Charge via Omise (throws on failure — order is NOT created) ─────────────
-    const charge = await this.omiseService.createCharge({
-      token: payload.omiseToken,
-      amountTHB: totalAmount,
-      description: `Beauty Up order for ${payload.shippingName}`,
-    });
+    let charge: Awaited<ReturnType<typeof this.omiseService.createCharge>>;
+    try {
+      charge = await this.omiseService.createCharge({
+        token: payload.omiseToken,
+        amountTHB: totalAmount,
+        description: `Beauty Up order for ${payload.shippingName}`,
+      });
+    } catch (err) {
+      throw new BadRequestException(
+        err instanceof Error ? err.message : "การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      );
+    }
 
     if (charge.status !== "successful") {
       throw new BadRequestException(
