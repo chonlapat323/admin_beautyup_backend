@@ -47,6 +47,18 @@ class CheckoutItemDto {
   @ApiProperty() @IsInt() @Min(1) @Type(() => Number) quantity!: number;
 }
 
+class PromptPayDto {
+  @ApiProperty({ type: [CheckoutItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CheckoutItemDto)
+  items!: CheckoutItemDto[];
+
+  @ApiProperty() @IsString() shippingName!: string;
+  @ApiProperty() @IsString() shippingPhone!: string;
+  @ApiProperty() @IsString() shippingAddr!: string;
+}
+
 class CheckoutDto {
   @ApiProperty({ type: [CheckoutItemDto] })
   @IsArray()
@@ -112,6 +124,20 @@ export class MobileController {
     const url = await this.mobileService.getReceiptUrl(orderId, member.id);
     if (!url) throw new BadRequestException("ไม่พบใบเสร็จสำหรับคำสั่งซื้อนี้");
     return { url };
+  }
+
+  @Post("promptpay")
+  @ApiOperation({ summary: "Initiate PromptPay QR payment" })
+  async initiatePromptPay(@Headers("authorization") auth: string, @Body() dto: PromptPayDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.initiatePromptPay(member.id, dto);
+  }
+
+  @Get("promptpay/:chargeId")
+  @ApiOperation({ summary: "Check PromptPay charge status" })
+  async checkPromptPay(@Headers("authorization") auth: string, @Param("chargeId") chargeId: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.checkPromptPay(chargeId, member.id);
   }
 
   @Get("addresses")

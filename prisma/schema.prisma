@@ -294,6 +294,15 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
+model PendingCheckout {
+  id           String   @id @default(cuid())
+  chargeId     String   @unique
+  memberId     String
+  checkoutData Json
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
 model Commission {
   id          String           @id @default(cuid())
   earnerId    String

@@ -10,6 +10,13 @@ type OmiseCharge = {
   description?: string;
   failure_code?: string;
   failure_message?: string;
+  expires_at?: string;
+  source?: {
+    scannable_code?: {
+      type: string;
+      image: { download_uri: string; filename: string };
+    };
+  };
 };
 
 @Injectable()
@@ -53,6 +60,55 @@ export class OmiseService {
       throw new Error(data.message ?? "Payment failed");
     }
 
+    return data;
+  }
+
+  async createPromptPayCharge(params: {
+    amountTHB: number;
+    description: string;
+  }): Promise<{ chargeId: string; qrCodeUrl: string; expiresAt: string }> {
+    const amountSatangs = Math.round(params.amountTHB * 100);
+    this.logger.debug(`[createPromptPayCharge] amount=${amountSatangs} satangs`);
+
+    const sourceRes = await fetch(`${this.apiUrl}/sources`, {
+      method: "POST",
+      headers: { Authorization: this.authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "promptpay", amount: amountSatangs, currency: "thb" }),
+    });
+
+    const sourceData = (await sourceRes.json()) as { id: string; message?: string };
+    if (!sourceRes.ok) throw new Error(sourceData.message ?? "Failed to create PromptPay source");
+
+    this.logger.debug(`[createPromptPayCharge] source=${sourceData.id}`);
+
+    const chargeRes = await fetch(`${this.apiUrl}/charges`, {
+      method: "POST",
+      headers: { Authorization: this.authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: amountSatangs,
+        currency: "thb",
+        source: sourceData.id,
+        description: params.description,
+      }),
+    });
+
+    const charge = (await chargeRes.json()) as OmiseCharge & { message?: string };
+    this.logger.debug(`[createPromptPayCharge] chargeId=${charge.id} status=${charge.status}`);
+
+    if (!chargeRes.ok) throw new Error(charge.message ?? "Failed to create PromptPay charge");
+
+    const qrCodeUrl = charge.source?.scannable_code?.image?.download_uri ?? "";
+    const expiresAt = charge.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+    return { chargeId: charge.id, qrCodeUrl, expiresAt };
+  }
+
+  async getCharge(chargeId: string): Promise<OmiseCharge> {
+    const res = await fetch(`${this.apiUrl}/charges/${chargeId}`, {
+      headers: { Authorization: this.authHeader },
+    });
+    const data = (await res.json()) as OmiseCharge & { message?: string };
+    if (!res.ok) throw new Error(data.message ?? "Failed to get charge");
     return data;
   }
 }
