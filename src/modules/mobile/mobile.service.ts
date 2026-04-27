@@ -289,8 +289,8 @@ export class MobileService {
     }
   }
 
-  async getReceiptUrl(orderId: string, memberId: string): Promise<string | null> {
-    const order = await this.prisma.order.findFirst({ where: { id: orderId, memberId } });
+  async getReceiptUrl(orderNumber: string, memberId: string): Promise<string | null> {
+    const order = await this.prisma.order.findFirst({ where: { orderNumber, memberId } });
     if (!order) return null;
     if (!order.flowAccountDocId) return null;
     return this.flowAccountService.getDocumentShareLink(order.flowAccountDocId);
