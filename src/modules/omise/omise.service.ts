@@ -14,7 +14,7 @@ type OmiseCharge = {
   source?: {
     scannable_code?: {
       type: string;
-      image: { download_uri: string; filename: string };
+      image?: { download_uri?: string; filename?: string };
     };
   };
 };
@@ -66,7 +66,7 @@ export class OmiseService {
   async createPromptPayCharge(params: {
     amountTHB: number;
     description: string;
-  }): Promise<{ chargeId: string; barcode: string; expiresAt: string }> {
+  }): Promise<{ chargeId: string; svgContent: string; expiresAt: string }> {
     const amountSatangs = Math.round(params.amountTHB * 100);
     this.logger.debug(`[createPromptPayCharge] amount=${amountSatangs} satangs`);
 
@@ -93,18 +93,22 @@ export class OmiseService {
     });
 
     const charge = (await chargeRes.json()) as OmiseCharge & { message?: string };
-    this.logger.debug(`[createPromptPayCharge] charge full response: ${JSON.stringify(charge)}`);
 
     if (!chargeRes.ok) throw new Error(charge.message ?? "Failed to create PromptPay charge");
 
-    const barcode = (sourceData["barcode"] as string | undefined)
-      ?? (sourceData["qr_code"] as string | undefined)
-      ?? (sourceData["payload"] as string | undefined)
-      ?? "";
+    const downloadUri = charge.source?.scannable_code?.image?.download_uri ?? "";
+    let svgContent = "";
+    if (downloadUri) {
+      try {
+        const imgRes = await fetch(downloadUri);
+        if (imgRes.ok) svgContent = await imgRes.text();
+      } catch (e) {
+        this.logger.warn(`[createPromptPayCharge] QR fetch failed: ${String(e)}`);
+      }
+    }
     const expiresAt = charge.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
-
-    this.logger.debug(`[createPromptPayCharge] barcode="${barcode.slice(0, 30)}..."`);
-    return { chargeId: charge.id, barcode, expiresAt };
+    this.logger.debug(`[createPromptPayCharge] chargeId=${charge.id} svgContent=${svgContent ? "yes" : "no"}`);
+    return { chargeId: charge.id, svgContent, expiresAt };
   }
 
   async getCharge(chargeId: string): Promise<OmiseCharge> {
