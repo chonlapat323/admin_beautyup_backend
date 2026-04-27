@@ -4,6 +4,7 @@ import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { OmiseService } from "../omise/omise.service";
 import { CommissionService } from "../commission/commission.service";
 import { SalonCodesService } from "../salon-codes/salon-codes.service";
+import { SettingsService } from "../settings/settings.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 function hashPassword(password: string): string {
@@ -42,6 +43,7 @@ export class MobileService {
     private readonly salonCodesService: SalonCodesService,
     private readonly flowAccountService: FlowAccountService,
     private readonly omiseService: OmiseService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async register(payload: {
@@ -187,7 +189,8 @@ export class MobileService {
 
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
     const shippingAmount = 0;
-    const totalAmount = subtotal + shippingAmount;
+    const gatewayFee = await this.settingsService.getValue("gateway_fee");
+    const totalAmount = subtotal + shippingAmount + gatewayFee;
 
     // ── Charge via Omise (throws on failure — order is NOT created) ─────────────
     let charge: Awaited<ReturnType<typeof this.omiseService.createCharge>>;
@@ -217,6 +220,7 @@ export class MobileService {
           status: "PAID",
           subtotalAmount: subtotal,
           shippingAmount,
+          gatewayFee,
           totalAmount,
           shippingName: payload.shippingName,
           shippingPhone: payload.shippingPhone,

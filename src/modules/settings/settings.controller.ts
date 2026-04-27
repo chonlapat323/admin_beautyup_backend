@@ -24,6 +24,11 @@ class UpdateSettingsDto {
   @IsOptional()
   @IsNumber()
   earnedPoint?: number;
+
+  @ApiProperty({ example: 20, required: false })
+  @IsOptional()
+  @IsNumber()
+  gatewayFee?: number;
 }
 
 @ApiTags("Settings")
