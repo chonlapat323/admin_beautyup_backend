@@ -66,6 +66,12 @@ class CheckoutDto {
 export class MobileController {
   constructor(private readonly mobileService: MobileService) {}
 
+  @Get("config")
+  @ApiOperation({ summary: "Public app config (gateway fee etc.)" })
+  getConfig() {
+    return this.mobileService.getConfig();
+  }
+
   @Post("register")
   @ApiOperation({ summary: "Member register" })
   register(@Body() dto: RegisterDto) {

@@ -46,6 +46,11 @@ export class MobileService {
     private readonly settingsService: SettingsService,
   ) {}
 
+  async getConfig() {
+    const gatewayFee = await this.settingsService.getValue("gateway_fee");
+    return { gatewayFee };
+  }
+
   async register(payload: {
     fullName: string;
     email?: string;
