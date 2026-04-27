@@ -291,21 +291,22 @@ export class FlowAccountService {
         return null;
       }
 
-      const taxData = JSON.parse(taxBody) as { data?: { recordId?: number } };
+      const taxData = JSON.parse(taxBody) as { data?: { recordId?: number; documentSerial?: string } };
       const taxRecordId = taxData?.data?.recordId;
-      if (!taxRecordId) {
-        this.logger.warn(`[createReceipt] Step1 no recordId in response`);
+      const taxSerial = taxData?.data?.documentSerial;
+      if (!taxRecordId || !taxSerial) {
+        this.logger.warn(`[createReceipt] Step1 missing recordId or documentSerial: ${taxBody}`);
         return null;
       }
 
-      this.logger.debug(`[createReceipt] Step1 taxRecordId=${taxRecordId}`);
+      this.logger.debug(`[createReceipt] Step1 taxRecordId=${taxRecordId} serial=${taxSerial}`);
 
       // Step 2 — upgrade to Receipt with payment (cash = no extra channel config needed)
       const upgradePayload = {
         recordId: 0,
         documentStructureType: 'UpgradeSimpleDocument',
         documentPaymentStructureType: 'SimpleDocumentWithPaymentReceivingCash',
-        documentReference: [{ documentId: taxRecordId }],
+        documentReference: [{ recordId: taxRecordId, referenceDocumentSerial: taxSerial, referenceDocumentType: 7 }],
         publishedOn: order.publishedOn,
         paymentDate: order.publishedOn,
         paymentMethod: 1,
