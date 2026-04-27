@@ -300,16 +300,15 @@ export class FlowAccountService {
 
       this.logger.debug(`[createReceipt] Step1 taxRecordId=${taxRecordId}`);
 
-      // Step 2 — upgrade to Receipt with payment (online channel)
+      // Step 2 — upgrade to Receipt with payment (cash = no extra channel config needed)
       const upgradePayload = {
         recordId: 0,
         documentStructureType: 'UpgradeSimpleDocument',
-        documentPaymentStructureType: 'SimpleDocumentWithPaymentReceivingOtherChannel',
+        documentPaymentStructureType: 'SimpleDocumentWithPaymentReceivingCash',
         documentReference: [{ documentId: taxRecordId }],
         publishedOn: order.publishedOn,
         paymentDate: order.publishedOn,
-        paymentMethod: 13,
-        otherChannelPaymentChannel: 3,
+        paymentMethod: 1,
         collected: order.grandTotal,
         items: order.items.map((i) => ({
           type: 3,
