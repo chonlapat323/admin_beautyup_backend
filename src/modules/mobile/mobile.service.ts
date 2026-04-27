@@ -262,7 +262,7 @@ export class MobileService {
       select: { fullName: true, email: true, phone: true, flowAccountContactId: true },
     });
 
-    const docId = await this.flowAccountService.createCashInvoice({
+    const docId = await this.flowAccountService.createReceipt({
       orderNumber: order.orderNumber,
       orderId: order.id,
       publishedOn: new Date(order.createdAt).toISOString().slice(0, 10),

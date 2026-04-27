@@ -232,7 +232,7 @@ export class FlowAccountService {
     }
   }
 
-  async createCashInvoice(order: {
+  async createReceipt(order: {
     orderNumber: string;
     orderId: string;
     publishedOn: string;
@@ -245,10 +245,11 @@ export class FlowAccountService {
     items: { name: string; quantity: number; pricePerUnit: number; total: number }[];
   }): Promise<number | null> {
     try {
-      this.logger.debug(`[createCashInvoice] orderId=${order.orderId}`);
+      this.logger.debug(`[createReceipt] orderId=${order.orderId}`);
       const token = await this.getToken();
 
-      const payload = {
+      // Step 1 — create Tax Invoice
+      const taxPayload = {
         recordId: 0,
         documentStructureType: 'SimpleDocument',
         publishedOn: order.publishedOn,
@@ -275,28 +276,71 @@ export class FlowAccountService {
         })),
       };
 
-      this.logger.debug(`[createCashInvoice] payload: ${JSON.stringify(payload)}`);
-
-      const res = await fetch(`${this.baseUrl}/cash-invoices`, {
+      this.logger.debug(`[createReceipt] Step1 POST /tax-invoices`);
+      const taxRes = await fetch(`${this.baseUrl}/tax-invoices`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(taxPayload),
       });
 
-      const rawBody = await res.text();
-      this.logger.debug(`[createCashInvoice] status=${res.status} body=${rawBody}`);
+      const taxBody = await taxRes.text();
+      this.logger.debug(`[createReceipt] Step1 status=${taxRes.status} body=${taxBody}`);
 
-      if (!res.ok) {
-        this.logger.warn(`[createCashInvoice] FAILED (${res.status}): ${rawBody}`);
+      if (!taxRes.ok) {
+        this.logger.warn(`[createReceipt] Step1 FAILED (${taxRes.status}): ${taxBody}`);
         return null;
       }
 
-      const data = JSON.parse(rawBody) as { data?: { recordId?: number } };
-      const docId = data?.data?.recordId ?? null;
-      this.logger.log(`[createCashInvoice] SUCCESS docId=${docId}`);
+      const taxData = JSON.parse(taxBody) as { data?: { recordId?: number } };
+      const taxRecordId = taxData?.data?.recordId;
+      if (!taxRecordId) {
+        this.logger.warn(`[createReceipt] Step1 no recordId in response`);
+        return null;
+      }
+
+      this.logger.debug(`[createReceipt] Step1 taxRecordId=${taxRecordId}`);
+
+      // Step 2 — upgrade to Receipt with payment (online channel)
+      const upgradePayload = {
+        recordId: 0,
+        documentStructureType: 'UpgradeSimpleDocument',
+        documentPaymentStructureType: 'SimpleDocumentWithPaymentReceivingOtherChannel',
+        documentReference: [{ documentId: taxRecordId }],
+        publishedOn: order.publishedOn,
+        paymentDate: order.publishedOn,
+        paymentMethod: 13,
+        otherChannelPaymentChannel: 3,
+        collected: order.grandTotal,
+        items: order.items.map((i) => ({
+          type: 3,
+          name: i.name,
+          quantity: i.quantity,
+          pricePerUnit: i.pricePerUnit,
+          total: i.total,
+        })),
+      };
+
+      this.logger.debug(`[createReceipt] Step2 POST /upgrade/receipts/with-payment`);
+      const receiptRes = await fetch(`${this.baseUrl}/upgrade/receipts/with-payment`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(upgradePayload),
+      });
+
+      const receiptBody = await receiptRes.text();
+      this.logger.debug(`[createReceipt] Step2 status=${receiptRes.status} body=${receiptBody}`);
+
+      if (!receiptRes.ok) {
+        this.logger.warn(`[createReceipt] Step2 FAILED (${receiptRes.status}): ${receiptBody}`);
+        return null;
+      }
+
+      const receiptData = JSON.parse(receiptBody) as { data?: { recordId?: number } };
+      const docId = receiptData?.data?.recordId ?? null;
+      this.logger.log(`[createReceipt] SUCCESS receiptDocId=${docId}`);
       return docId;
     } catch (error) {
-      this.logger.error(`[createCashInvoice] EXCEPTION: ${String(error)}`);
+      this.logger.error(`[createReceipt] EXCEPTION: ${String(error)}`);
       return null;
     }
   }
@@ -306,7 +350,7 @@ export class FlowAccountService {
       this.logger.debug(`[getDocumentShareLink] documentId=${documentId}`);
       const token = await this.getToken();
 
-      const res = await fetch(`${this.baseUrl}/cash-invoices/sharedocument`, {
+      const res = await fetch(`${this.baseUrl}/receipts/sharedocument`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId, culture: 'th' }),
