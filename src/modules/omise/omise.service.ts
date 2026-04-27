@@ -76,15 +76,10 @@ export class OmiseService {
       body: JSON.stringify({ type: "promptpay", amount: amountSatangs, currency: "thb" }),
     });
 
-    const sourceData = (await sourceRes.json()) as {
-      id: string;
-      barcode?: string;
-      scannable_code?: { image?: { download_uri?: string } };
-      message?: string;
-    };
-    if (!sourceRes.ok) throw new Error(sourceData.message ?? "Failed to create PromptPay source");
+    const sourceData = (await sourceRes.json()) as Record<string, unknown> & { id?: string; message?: string };
+    if (!sourceRes.ok) throw new Error((sourceData.message as string | undefined) ?? "Failed to create PromptPay source");
 
-    this.logger.debug(`[createPromptPayCharge] source=${sourceData.id} barcode=${sourceData.barcode ? "yes" : "no"}`);
+    this.logger.debug(`[createPromptPayCharge] source full response: ${JSON.stringify(sourceData)}`);
 
     const chargeRes = await fetch(`${this.apiUrl}/charges`, {
       method: "POST",
@@ -102,9 +97,13 @@ export class OmiseService {
 
     if (!chargeRes.ok) throw new Error(charge.message ?? "Failed to create PromptPay charge");
 
-    const barcode = sourceData.barcode ?? "";
+    const barcode = (sourceData["barcode"] as string | undefined)
+      ?? (sourceData["qr_code"] as string | undefined)
+      ?? (sourceData["payload"] as string | undefined)
+      ?? "";
     const expiresAt = charge.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
+    this.logger.debug(`[createPromptPayCharge] barcode="${barcode.slice(0, 30)}..."`);
     return { chargeId: charge.id, barcode, expiresAt };
   }
 
