@@ -245,7 +245,55 @@ export class MobileService {
 
     await this.commissionService.createForOrder(order.id);
 
+    // sync to FlowAccount in background — failure does not block checkout
+    this.syncOrderToFlowAccount(order, memberId).catch((err) =>
+      this.logger.error(`[FlowAccount order sync] FAILED for order ${order.id}: ${String(err)}`),
+    );
+
     return order;
+  }
+
+  private async syncOrderToFlowAccount(
+    order: { id: string; orderNumber: string; createdAt: Date; subtotalAmount: unknown; totalAmount: unknown; items: { name: string; quantity: number; unitPrice: unknown; totalPrice: unknown }[] },
+    memberId: string,
+  ): Promise<void> {
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      select: { fullName: true, email: true, phone: true, flowAccountContactId: true },
+    });
+
+    const docId = await this.flowAccountService.createCashInvoice({
+      orderNumber: order.orderNumber,
+      orderId: order.id,
+      publishedOn: new Date(order.createdAt).toISOString().slice(0, 10),
+      contactId: member?.flowAccountContactId ?? null,
+      contactName: member?.fullName ?? 'ลูกค้า',
+      contactEmail: member?.email,
+      contactPhone: member?.phone,
+      subtotal: Number(order.subtotalAmount),
+      grandTotal: Number(order.totalAmount),
+      items: order.items.map((i) => ({
+        name: i.name,
+        quantity: i.quantity,
+        pricePerUnit: Number(i.unitPrice),
+        total: Number(i.totalPrice),
+      })),
+    });
+
+    if (docId) {
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { flowAccountDocId: docId },
+      });
+      this.logger.log(`[FlowAccount order sync] SUCCESS docId=${docId} for order ${order.id}`);
+    }
+  }
+
+  async getReceiptUrl(orderId: string, memberId: string): Promise<string | null> {
+    const order = await this.prisma.order.findFirst({ where: { id: orderId, memberId } });
+    if (!order) return null;
+    if (!order.flowAccountDocId) return null;
+    return this.flowAccountService.getDocumentShareLink(order.flowAccountDocId);
   }
 
   async getOrders(memberId: string) {

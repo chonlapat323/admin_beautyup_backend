@@ -246,8 +246,9 @@ model Order {
   shippingName   String?
   shippingPhone  String?
   shippingAddr   String?
-  chargeId       String?
-  items          OrderItem[]
+  chargeId            String?
+  flowAccountDocId    Int?
+  items               OrderItem[]
   commissions    Commission[]
   statusLogs     OrderStatusLog[]
   createdAt      DateTime           @default(now())

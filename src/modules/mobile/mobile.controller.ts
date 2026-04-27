@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, UnauthorizedException } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
@@ -103,6 +103,15 @@ export class MobileController {
   async getOrders(@Headers("authorization") auth: string) {
     const member = await this.extractMember(auth);
     return this.mobileService.getOrders(member.id);
+  }
+
+  @Get("orders/:orderId/receipt")
+  @ApiOperation({ summary: "Get FlowAccount shareable receipt URL for an order" })
+  async getReceipt(@Headers("authorization") auth: string, @Param("orderId") orderId: string) {
+    const member = await this.extractMember(auth);
+    const url = await this.mobileService.getReceiptUrl(orderId, member.id);
+    if (!url) throw new BadRequestException("ไม่พบใบเสร็จสำหรับคำสั่งซื้อนี้");
+    return { url };
   }
 
   @Get("addresses")

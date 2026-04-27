@@ -232,6 +232,102 @@ export class FlowAccountService {
     }
   }
 
+  async createCashInvoice(order: {
+    orderNumber: string;
+    orderId: string;
+    publishedOn: string;
+    contactId?: number | null;
+    contactName: string;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+    subtotal: number;
+    grandTotal: number;
+    items: { name: string; quantity: number; pricePerUnit: number; total: number }[];
+  }): Promise<number | null> {
+    try {
+      this.logger.debug(`[createCashInvoice] orderId=${order.orderId}`);
+      const token = await this.getToken();
+
+      const payload = {
+        recordId: 0,
+        documentStructureType: 'SimpleDocument',
+        publishedOn: order.publishedOn,
+        creditType: 3,
+        reference: order.orderNumber,
+        externalDocumentId: order.orderId,
+        ...(order.contactId ? { contactId: order.contactId } : {}),
+        contactName: order.contactName,
+        contactEmail: order.contactEmail ?? '',
+        contactNumber: order.contactPhone ?? '',
+        contactGroup: 1,
+        subTotal: order.subtotal,
+        discountAmount: 0,
+        totalAfterDiscount: order.subtotal,
+        isVat: false,
+        vatAmount: 0,
+        grandTotal: order.grandTotal,
+        items: order.items.map((i) => ({
+          type: 3,
+          name: i.name,
+          quantity: i.quantity,
+          pricePerUnit: i.pricePerUnit,
+          total: i.total,
+        })),
+      };
+
+      this.logger.debug(`[createCashInvoice] payload: ${JSON.stringify(payload)}`);
+
+      const res = await fetch(`${this.baseUrl}/cash-invoices`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const rawBody = await res.text();
+      this.logger.debug(`[createCashInvoice] status=${res.status} body=${rawBody}`);
+
+      if (!res.ok) {
+        this.logger.warn(`[createCashInvoice] FAILED (${res.status}): ${rawBody}`);
+        return null;
+      }
+
+      const data = JSON.parse(rawBody) as { data?: { recordId?: number } };
+      const docId = data?.data?.recordId ?? null;
+      this.logger.log(`[createCashInvoice] SUCCESS docId=${docId}`);
+      return docId;
+    } catch (error) {
+      this.logger.error(`[createCashInvoice] EXCEPTION: ${String(error)}`);
+      return null;
+    }
+  }
+
+  async getDocumentShareLink(documentId: number): Promise<string | null> {
+    try {
+      this.logger.debug(`[getDocumentShareLink] documentId=${documentId}`);
+      const token = await this.getToken();
+
+      const res = await fetch(`${this.baseUrl}/cash-invoices/sharedocument`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId, culture: 'th' }),
+      });
+
+      const rawBody = await res.text();
+      this.logger.debug(`[getDocumentShareLink] status=${res.status} body=${rawBody}`);
+
+      if (!res.ok) {
+        this.logger.warn(`[getDocumentShareLink] FAILED (${res.status}): ${rawBody}`);
+        return null;
+      }
+
+      const data = JSON.parse(rawBody) as { data?: { link?: string } };
+      return data?.data?.link ?? null;
+    } catch (error) {
+      this.logger.error(`[getDocumentShareLink] EXCEPTION: ${String(error)}`);
+      return null;
+    }
+  }
+
   async updateContactAddress(
     contactId: number,
     fullName: string,
