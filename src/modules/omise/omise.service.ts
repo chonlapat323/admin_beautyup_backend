@@ -93,7 +93,7 @@ export class OmiseService {
     });
 
     const charge = (await chargeRes.json()) as OmiseCharge & { message?: string };
-    this.logger.debug(`[createPromptPayCharge] chargeId=${charge.id} status=${charge.status}`);
+    this.logger.debug(`[createPromptPayCharge] charge full response: ${JSON.stringify(charge)}`);
 
     if (!chargeRes.ok) throw new Error(charge.message ?? "Failed to create PromptPay charge");
 
