@@ -410,7 +410,7 @@ export class MobileService {
     shippingName: string;
     shippingPhone: string;
     shippingAddr: string;
-  }): Promise<{ chargeId: string; qrCodeUrl: string; expiresAt: string }> {
+  }): Promise<{ chargeId: string; barcode: string; expiresAt: string }> {
     const productIds = payload.items.map((i) => i.productId);
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds }, status: "ACTIVE" },
