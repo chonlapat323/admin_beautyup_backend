@@ -243,89 +243,139 @@ export class FlowAccountService {
     subtotal: number;
     grandTotal: number;
     items: { name: string; quantity: number; pricePerUnit: number; total: number }[];
-  }): Promise<number | null> {
+  }): Promise<{ taxInvoiceId: number; receiptId: number } | null> {
     try {
       this.logger.debug(`[createReceipt] orderId=${order.orderId}`);
       const token = await this.getToken();
 
-      const payload = {
-        recordId: 0,
-        documentStructureType: 'SimpleDocument',
-        documentPaymentStructureType: 'SimpleDocumentWithPaymentReceivingCash',
-        publishedOn: order.publishedOn,
-        paymentDate: order.publishedOn,
-        paymentMethod: 1,
-        collected: order.grandTotal,
-        reference: order.orderNumber,
-        externalDocumentId: order.orderId,
+      const baseContact = {
         ...(order.contactId ? { contactId: order.contactId } : {}),
         contactName: order.contactName,
         contactEmail: order.contactEmail ?? '',
         contactNumber: order.contactPhone ?? '',
         contactGroup: 1,
+      };
+      const baseItems = order.items.map((i) => ({
+        type: 3,
+        name: i.name,
+        quantity: i.quantity,
+        pricePerUnit: i.pricePerUnit,
+        total: i.total,
+      }));
+
+      // Step 1: Create Tax Invoice (unpaid)
+      const invoicePayload = {
+        recordId: 0,
+        documentStructureType: 'SimpleDocument',
+        publishedOn: order.publishedOn,
+        reference: order.orderNumber,
+        externalDocumentId: order.orderId,
+        ...baseContact,
         subTotal: order.subtotal,
         discountAmount: 0,
         totalAfterDiscount: order.subtotal,
         isVat: false,
         vatAmount: 0,
         grandTotal: order.grandTotal,
-        items: order.items.map((i) => ({
-          type: 3,
-          name: i.name,
-          quantity: i.quantity,
-          pricePerUnit: i.pricePerUnit,
-          total: i.total,
-        })),
+        items: baseItems,
       };
 
-      this.logger.debug(`[createReceipt] POST /tax-invoices/with-payment`);
-      const res = await fetch(`${this.baseUrl}/tax-invoices/with-payment`, {
+      this.logger.debug(`[createReceipt] POST /tax-invoices`);
+      const invRes = await fetch(`${this.baseUrl}/tax-invoices`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(invoicePayload),
       });
 
-      const rawBody = await res.text();
-      this.logger.debug(`[createReceipt] status=${res.status} body=${rawBody}`);
+      const invBody = await invRes.text();
+      this.logger.debug(`[createReceipt] tax-invoice status=${invRes.status} body=${invBody}`);
 
-      if (!res.ok) {
-        this.logger.warn(`[createReceipt] FAILED (${res.status}): ${rawBody}`);
+      if (!invRes.ok) {
+        this.logger.warn(`[createReceipt] tax-invoice FAILED (${invRes.status}): ${invBody}`);
         return null;
       }
 
-      const data = JSON.parse(rawBody) as { data?: { recordId?: number } };
-      const docId = data?.data?.recordId ?? null;
-      this.logger.log(`[createReceipt] SUCCESS docId=${docId}`);
-      return docId;
+      const invData = JSON.parse(invBody) as { data?: { recordId?: number; documentSerial?: string } };
+      const taxInvoiceId = invData?.data?.recordId;
+      const taxInvoiceSerial = invData?.data?.documentSerial;
+      if (!taxInvoiceId || !taxInvoiceSerial) {
+        this.logger.warn(`[createReceipt] missing taxInvoiceId or serial`);
+        return null;
+      }
+      this.logger.log(`[createReceipt] tax-invoice created id=${taxInvoiceId} serial=${taxInvoiceSerial}`);
+
+      // Step 2: Create Receipt referencing the Tax Invoice
+      const receiptPayload = {
+        documentStructureType: 'SimpleDocument',
+        documentPaymentStructureType: 'UpgradeSimpleDocumentWithPaymentReceivingCash',
+        publishedOn: order.publishedOn,
+        paymentDate: order.publishedOn,
+        paymentMethod: 1,
+        collected: order.grandTotal,
+        documentReference: [{
+          recordId: taxInvoiceId,
+          referenceDocumentSerial: taxInvoiceSerial,
+          referenceDocumentType: 7,
+        }],
+        ...baseContact,
+        subTotal: order.subtotal,
+        discountAmount: 0,
+        totalAfterDiscount: order.subtotal,
+        isVat: false,
+        vatAmount: 0,
+        grandTotal: order.grandTotal,
+        items: baseItems,
+      };
+
+      this.logger.debug(`[createReceipt] POST /upgrade/receipts/with-payment`);
+      const recRes = await fetch(`${this.baseUrl}/upgrade/receipts/with-payment`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(receiptPayload),
+      });
+
+      const recBody = await recRes.text();
+      this.logger.debug(`[createReceipt] receipt status=${recRes.status} body=${recBody}`);
+
+      if (!recRes.ok) {
+        this.logger.warn(`[createReceipt] receipt FAILED (${recRes.status}): ${recBody}`);
+        // Return tax invoice only if receipt fails
+        return { taxInvoiceId, receiptId: 0 };
+      }
+
+      const recData = JSON.parse(recBody) as { data?: { recordId?: number } };
+      const receiptId = recData?.data?.recordId ?? 0;
+      this.logger.log(`[createReceipt] receipt created id=${receiptId}`);
+
+      return { taxInvoiceId, receiptId };
     } catch (error) {
       this.logger.error(`[createReceipt] EXCEPTION: ${String(error)}`);
       return null;
     }
   }
 
-  async getDocumentShareLink(documentId: number): Promise<string | null> {
+  async getShareLink(documentId: number, type: 'tax-invoice' | 'receipt'): Promise<string | null> {
     try {
-      this.logger.debug(`[getDocumentShareLink] documentId=${documentId}`);
+      this.logger.debug(`[getShareLink] documentId=${documentId} type=${type}`);
       const token = await this.getToken();
+      const endpoint = type === 'receipt' ? 'receipts' : 'tax-invoices';
 
-      const res = await fetch(`${this.baseUrl}/tax-invoices/sharedocument`, {
+      const res = await fetch(`${this.baseUrl}/${endpoint}/sharedocument`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId, culture: 'th', copies: 0 }),
+        body: JSON.stringify({ documentId, culture: 'th' }),
       });
 
       const rawBody = await res.text();
-      this.logger.debug(`[getDocumentShareLink] status=${res.status} body=${rawBody}`);
-
       if (!res.ok) {
-        this.logger.warn(`[getDocumentShareLink] FAILED (${res.status}): ${rawBody}`);
+        this.logger.warn(`[getShareLink] FAILED (${res.status}): ${rawBody}`);
         return null;
       }
 
       const data = JSON.parse(rawBody) as { data?: { link?: string } };
       return data?.data?.link ?? null;
     } catch (error) {
-      this.logger.error(`[getDocumentShareLink] EXCEPTION: ${String(error)}`);
+      this.logger.error(`[getShareLink] EXCEPTION: ${String(error)}`);
       return null;
     }
   }

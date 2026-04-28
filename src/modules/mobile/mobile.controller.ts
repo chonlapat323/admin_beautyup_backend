@@ -117,13 +117,11 @@ export class MobileController {
     return this.mobileService.getOrders(member.id);
   }
 
-  @Get("orders/:orderId/receipt")
-  @ApiOperation({ summary: "Get FlowAccount shareable receipt URL for an order" })
-  async getReceipt(@Headers("authorization") auth: string, @Param("orderId") orderId: string) {
+  @Get("orders/:orderId/documents")
+  @ApiOperation({ summary: "Get FlowAccount shareable links for tax invoice and receipt" })
+  async getOrderDocuments(@Headers("authorization") auth: string, @Param("orderId") orderId: string) {
     const member = await this.extractMember(auth);
-    const url = await this.mobileService.getReceiptUrl(orderId, member.id);
-    if (!url) throw new BadRequestException("ไม่พบใบเสร็จสำหรับคำสั่งซื้อนี้");
-    return { url };
+    return this.mobileService.getDocumentUrls(orderId, member.id);
   }
 
   @Post("promptpay")

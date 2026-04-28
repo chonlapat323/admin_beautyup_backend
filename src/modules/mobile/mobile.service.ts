@@ -262,7 +262,7 @@ export class MobileService {
       select: { fullName: true, email: true, phone: true, flowAccountContactId: true },
     });
 
-    const docId = await this.flowAccountService.createReceipt({
+    const result = await this.flowAccountService.createReceipt({
       orderNumber: order.orderNumber,
       orderId: order.id,
       publishedOn: new Date(order.createdAt).toISOString().slice(0, 10),
@@ -280,20 +280,32 @@ export class MobileService {
       })),
     });
 
-    if (docId) {
+    if (result) {
       await this.prisma.order.update({
         where: { id: order.id },
-        data: { flowAccountDocId: docId },
+        data: {
+          flowAccountDocId: result.taxInvoiceId,
+          flowAccountReceiptId: result.receiptId || null,
+        },
       });
-      this.logger.log(`[FlowAccount order sync] SUCCESS docId=${docId} for order ${order.id}`);
+      this.logger.log(`[FlowAccount order sync] SUCCESS taxInvoiceId=${result.taxInvoiceId} receiptId=${result.receiptId} for order ${order.id}`);
     }
   }
 
-  async getReceiptUrl(orderNumber: string, memberId: string): Promise<string | null> {
+  async getDocumentUrls(orderNumber: string, memberId: string): Promise<{ taxInvoiceUrl: string | null; receiptUrl: string | null }> {
     const order = await this.prisma.order.findFirst({ where: { orderNumber, memberId } });
-    if (!order) return null;
-    if (!order.flowAccountDocId) return null;
-    return this.flowAccountService.getDocumentShareLink(order.flowAccountDocId);
+    if (!order) return { taxInvoiceUrl: null, receiptUrl: null };
+
+    const [taxInvoiceUrl, receiptUrl] = await Promise.all([
+      order.flowAccountDocId
+        ? this.flowAccountService.getShareLink(order.flowAccountDocId, 'tax-invoice')
+        : null,
+      order.flowAccountReceiptId
+        ? this.flowAccountService.getShareLink(order.flowAccountReceiptId, 'receipt')
+        : null,
+    ]);
+
+    return { taxInvoiceUrl, receiptUrl };
   }
 
   async getOrders(memberId: string) {

@@ -246,8 +246,9 @@ model Order {
   shippingName   String?
   shippingPhone  String?
   shippingAddr   String?
-  chargeId            String?
-  flowAccountDocId    Int?
+  chargeId              String?
+  flowAccountDocId      Int?
+  flowAccountReceiptId  Int?
   items               OrderItem[]
   commissions    Commission[]
   statusLogs     OrderStatusLog[]
