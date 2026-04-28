@@ -46,33 +46,30 @@ export class OrdersService {
     const awardPoints =
       status === "DELIVERED" &&
       order.status !== "DELIVERED" &&
-      order.pointEarned > 0;
+      order.pointEarned > 0 &&
+      order.memberId !== null;
 
-    const ops: Parameters<typeof this.prisma.$transaction>[0] = [
-      this.prisma.order.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const updatedOrder = await tx.order.update({
         where: { id },
         data: { status: status as never },
-      }),
-      this.prisma.orderStatusLog.create({
+      });
+      await tx.orderStatusLog.create({
         data: {
           orderId: id,
           fromStatus: order.status,
           toStatus: status as never,
           changedByName,
         },
-      }),
-    ];
-
-    if (awardPoints) {
-      ops.push(
-        this.prisma.member.update({
+      });
+      if (awardPoints && order.memberId) {
+        await tx.member.update({
           where: { id: order.memberId },
           data: { pointBalance: { increment: order.pointEarned } },
-        }),
-      );
-    }
-
-    const [updated] = await this.prisma.$transaction(ops);
+        });
+      }
+      return updatedOrder;
+    });
 
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
