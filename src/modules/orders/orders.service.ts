@@ -37,10 +37,18 @@ export class OrdersService {
   }
 
   async updateStatus(id: string, status: string, changedByName: string) {
-    const order = await this.prisma.order.findUnique({ where: { id }, select: { status: true } });
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { status: true, memberId: true, pointEarned: true },
+    });
     if (!order) throw new Error("Order not found");
 
-    const [updated] = await this.prisma.$transaction([
+    const awardPoints =
+      status === "DELIVERED" &&
+      order.status !== "DELIVERED" &&
+      order.pointEarned > 0;
+
+    const ops: Parameters<typeof this.prisma.$transaction>[0] = [
       this.prisma.order.update({
         where: { id },
         data: { status: status as never },
@@ -53,7 +61,18 @@ export class OrdersService {
           changedByName,
         },
       }),
-    ]);
+    ];
+
+    if (awardPoints) {
+      ops.push(
+        this.prisma.member.update({
+          where: { id: order.memberId },
+          data: { pointBalance: { increment: order.pointEarned } },
+        }),
+      );
+    }
+
+    const [updated] = await this.prisma.$transaction(ops);
 
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }

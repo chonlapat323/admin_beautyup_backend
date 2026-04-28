@@ -248,9 +248,6 @@ export class MobileService {
           data: { sellableStock: { decrement: item.quantity } },
         }),
       ),
-      ...(pointEarned > 0
-        ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
-        : []),
     ]);
 
     await this.commissionService.createForOrder(order.id);
@@ -548,9 +545,6 @@ export class MobileService {
             data: { sellableStock: { decrement: item.quantity } },
           }),
         ),
-        ...(pointEarned > 0
-          ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
-          : []),
       ]);
 
       await this.prisma.pendingCheckout.delete({ where: { chargeId } });
