@@ -47,8 +47,11 @@ export class MobileService {
   ) {}
 
   async getConfig() {
-    const gatewayFee = await this.settingsService.getValue("gateway_fee");
-    return { gatewayFee };
+    const [gatewayFee, pointTiers] = await Promise.all([
+      this.settingsService.getValue("gateway_fee"),
+      this.settingsService.getPointTiers(),
+    ]);
+    return { gatewayFee, pointTiers };
   }
 
   async register(payload: {
@@ -217,7 +220,8 @@ export class MobileService {
       );
     }
 
-    const pointEarned = Math.floor(subtotal / 3000) * 300;
+    const pointTiers = await this.settingsService.getPointTiers();
+    const pointEarned = SettingsService.calculatePoints(subtotal, pointTiers);
 
     const [order] = await this.prisma.$transaction([
       this.prisma.order.create({
@@ -516,7 +520,8 @@ export class MobileService {
       };
       const data = pending.checkoutData as CheckoutData;
 
-      const pointEarned = Math.floor(data.subtotal / 3000) * 300;
+      const pointTiers = await this.settingsService.getPointTiers();
+      const pointEarned = SettingsService.calculatePoints(data.subtotal, pointTiers);
 
       const [order] = await this.prisma.$transaction([
         this.prisma.order.create({
