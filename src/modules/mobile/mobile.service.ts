@@ -217,6 +217,8 @@ export class MobileService {
       );
     }
 
+    const pointEarned = Math.floor(subtotal / 3000) * 300;
+
     const [order] = await this.prisma.$transaction([
       this.prisma.order.create({
         data: {
@@ -227,6 +229,7 @@ export class MobileService {
           shippingAmount,
           gatewayFee,
           totalAmount,
+          pointEarned,
           shippingName: payload.shippingName,
           shippingPhone: payload.shippingPhone,
           shippingAddr: payload.shippingAddr,
@@ -241,6 +244,9 @@ export class MobileService {
           data: { sellableStock: { decrement: item.quantity } },
         }),
       ),
+      ...(pointEarned > 0
+        ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
+        : []),
     ]);
 
     await this.commissionService.createForOrder(order.id);
@@ -510,6 +516,8 @@ export class MobileService {
       };
       const data = pending.checkoutData as CheckoutData;
 
+      const pointEarned = Math.floor(data.subtotal / 3000) * 300;
+
       const [order] = await this.prisma.$transaction([
         this.prisma.order.create({
           data: {
@@ -520,6 +528,7 @@ export class MobileService {
             shippingAmount: 0,
             gatewayFee: data.gatewayFee,
             totalAmount: data.totalAmount,
+            pointEarned,
             shippingName: data.shippingName,
             shippingPhone: data.shippingPhone,
             shippingAddr: data.shippingAddr,
@@ -534,6 +543,9 @@ export class MobileService {
             data: { sellableStock: { decrement: item.quantity } },
           }),
         ),
+        ...(pointEarned > 0
+          ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
+          : []),
       ]);
 
       await this.prisma.pendingCheckout.delete({ where: { chargeId } });
