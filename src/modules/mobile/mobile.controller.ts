@@ -163,6 +163,13 @@ export class MobileController {
     return this.mobileService.updateAddress(member.id, id, dto);
   }
 
+  @Get("me/commissions")
+  @ApiOperation({ summary: "Get commission summary for current member" })
+  async getCommissionSummary(@Headers("authorization") auth: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.getCommissionSummary(member.id);
+  }
+
   @Delete("addresses/:id")
   @ApiOperation({ summary: "Delete address" })
   async deleteAddress(@Headers("authorization") auth: string, @Param("id") id: string) {

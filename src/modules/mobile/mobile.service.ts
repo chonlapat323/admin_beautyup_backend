@@ -572,6 +572,10 @@ export class MobileService {
     return session.member;
   }
 
+  async getCommissionSummary(memberId: string) {
+    return this.commissionService.summary(memberId);
+  }
+
   private safeProfile(member: {
     id: string;
     fullName: string;
