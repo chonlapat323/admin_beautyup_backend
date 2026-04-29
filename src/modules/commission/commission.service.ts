@@ -107,7 +107,7 @@ export class CommissionService {
 
     const now = new Date();
     const payouts = await this.prisma.$transaction(async (tx) => {
-      const created = [];
+      const created: Awaited<ReturnType<typeof tx.commissionPayout.create>>[] = [];
       for (const [earnerId, { ids: earnedIds, total }] of byEarner) {
         const payout = await tx.commissionPayout.create({
           data: {
