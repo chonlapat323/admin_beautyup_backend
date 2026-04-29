@@ -121,7 +121,8 @@ model Member {
   store                Store?          @relation(fields: [storeId], references: [id])
   addresses            MemberAddress[]
   orders               Order[]
-  commissionsEarned    Commission[]    @relation("CommissionEarner")
+  commissionsEarned    Commission[]       @relation("CommissionEarner")
+  commissionPayouts    CommissionPayout[] @relation("MemberPayouts")
   sessions             MemberSession[]
   flowAccountContactId Int?
   createdAt            DateTime        @default(now())
@@ -305,17 +306,31 @@ model PendingCheckout {
 }
 
 model Commission {
-  id          String           @id @default(cuid())
+  id          String            @id @default(cuid())
   earnerId    String
-  earner      Member           @relation("CommissionEarner", fields: [earnerId], references: [id])
+  earner      Member            @relation("CommissionEarner", fields: [earnerId], references: [id])
   orderId     String
-  order       Order            @relation(fields: [orderId], references: [id])
-  orderAmount Decimal          @db.Decimal(10, 2)
-  rate        Decimal          @db.Decimal(5, 2)
-  amount      Decimal          @db.Decimal(10, 2)
-  status      CommissionStatus @default(PENDING)
+  order       Order             @relation(fields: [orderId], references: [id])
+  orderAmount Decimal           @db.Decimal(10, 2)
+  rate        Decimal           @db.Decimal(5, 2)
+  amount      Decimal           @db.Decimal(10, 2)
+  status      CommissionStatus  @default(PENDING)
   paidAt      DateTime?
   note        String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  payoutId    String?
+  payout      CommissionPayout? @relation(fields: [payoutId], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model CommissionPayout {
+  id          String       @id @default(cuid())
+  memberId    String
+  member      Member       @relation("MemberPayouts", fields: [memberId], references: [id])
+  totalAmount Decimal      @db.Decimal(10, 2)
+  method      String       @default("BANK_TRANSFER")
+  reference   String?
+  note        String?
+  commissions Commission[]
+  createdAt   DateTime     @default(now())
 }

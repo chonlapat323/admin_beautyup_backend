@@ -88,11 +88,65 @@ export class CommissionService {
     return { items, meta: { page: params.page, pageSize: params.pageSize, totalItems, totalPages } };
   }
 
-  async markPaid(ids: string[], note?: string) {
-    return this.prisma.commission.updateMany({
+  async markPaid(ids: string[], opts?: { note?: string; method?: string; reference?: string }) {
+    const commissions = await this.prisma.commission.findMany({
       where: { id: { in: ids }, status: CommissionStatus.PENDING },
-      data: { status: CommissionStatus.PAID, paidAt: new Date(), note },
+      select: { id: true, earnerId: true, amount: true },
     });
+
+    if (commissions.length === 0) return { count: 0, payout: null };
+
+    // Group by earner — one payout log per earner per call
+    const byEarner = new Map<string, { ids: string[]; total: number }>();
+    for (const c of commissions) {
+      const entry = byEarner.get(c.earnerId) ?? { ids: [], total: 0 };
+      entry.ids.push(c.id);
+      entry.total += Number(c.amount);
+      byEarner.set(c.earnerId, entry);
+    }
+
+    const now = new Date();
+    const payouts = await this.prisma.$transaction(async (tx) => {
+      const created = [];
+      for (const [earnerId, { ids: earnedIds, total }] of byEarner) {
+        const payout = await tx.commissionPayout.create({
+          data: {
+            memberId: earnerId,
+            totalAmount: total,
+            method: opts?.method ?? "BANK_TRANSFER",
+            reference: opts?.reference,
+            note: opts?.note,
+          },
+        });
+        await tx.commission.updateMany({
+          where: { id: { in: earnedIds } },
+          data: { status: CommissionStatus.PAID, paidAt: now, payoutId: payout.id, note: opts?.note },
+        });
+        created.push(payout);
+      }
+      return created;
+    });
+
+    return { count: commissions.length, payouts };
+  }
+
+  async findPayouts(params: { memberId?: string; page: number; pageSize: number }) {
+    const where = params.memberId ? { memberId: params.memberId } : {};
+    const [items, totalItems] = await this.prisma.$transaction([
+      this.prisma.commissionPayout.findMany({
+        where,
+        include: {
+          member: { select: { id: true, fullName: true } },
+          commissions: { select: { id: true, amount: true, orderId: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: (params.page - 1) * params.pageSize,
+        take: params.pageSize,
+      }),
+      this.prisma.commissionPayout.count({ where }),
+    ]);
+    const totalPages = Math.max(1, Math.ceil(totalItems / params.pageSize));
+    return { items, meta: { page: params.page, pageSize: params.pageSize, totalItems, totalPages } };
   }
 
   async cancel(id: string) {

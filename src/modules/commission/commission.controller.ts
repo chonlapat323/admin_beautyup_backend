@@ -55,6 +55,35 @@ class MarkPaidDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiPropertyOptional({ example: "BANK_TRANSFER" })
+  @IsOptional()
+  @IsString()
+  method?: string;
+
+  @ApiPropertyOptional({ description: "Bank ref / slip number" })
+  @IsOptional()
+  @IsString()
+  reference?: string;
+}
+
+class ListPayoutsQueryDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  memberId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  page?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  pageSize?: number;
 }
 
 @ApiTags("Commission")
@@ -99,9 +128,23 @@ export class CommissionController {
   }
 
   @Post("pay")
-  @ApiOperation({ summary: "Mark commissions as paid (bulk)" })
+  @ApiOperation({ summary: "Mark commissions as paid — creates a CommissionPayout log per earner" })
   markPaid(@Body() dto: MarkPaidDto) {
-    return this.commissionService.markPaid(dto.ids, dto.note);
+    return this.commissionService.markPaid(dto.ids, {
+      note: dto.note,
+      method: dto.method,
+      reference: dto.reference,
+    });
+  }
+
+  @Get("payouts")
+  @ApiOperation({ summary: "List payout logs" })
+  findPayouts(@Query() query: ListPayoutsQueryDto) {
+    return this.commissionService.findPayouts({
+      memberId: query.memberId,
+      page: query.page && query.page > 0 ? query.page : 1,
+      pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 20,
+    });
   }
 
   @Patch(":id/cancel")
