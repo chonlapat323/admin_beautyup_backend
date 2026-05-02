@@ -20,6 +20,7 @@ class LoginDto {
 
 class AddressDto {
   @ApiPropertyOptional() @IsOptional() @IsString() label?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() storeName?: string;
   @ApiProperty() @IsString() recipient!: string;
   @ApiProperty() @IsString() phone!: string;
   @ApiProperty() @IsString() addressLine1!: string;
@@ -32,6 +33,7 @@ class AddressDto {
 
 class UpdateAddressDto {
   @ApiPropertyOptional() @IsOptional() @IsString() label?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() storeName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() recipient?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() addressLine1?: string;

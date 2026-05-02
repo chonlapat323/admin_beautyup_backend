@@ -134,6 +134,7 @@ model MemberAddress {
   memberId     String
   member       Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   label        String?
+  storeName    String?
   recipient    String
   phone        String
   addressLine1 String
