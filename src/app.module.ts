@@ -25,6 +25,7 @@ import { UploadsModule } from "./modules/uploads/uploads.module";
 import { MobileModule } from "./modules/mobile/mobile.module";
 import { CommissionModule } from "./modules/commission/commission.module";
 import { SalonCodesModule } from "./modules/salon-codes/salon-codes.module";
+import { RewardProductsModule } from "./modules/reward-products/reward-products.module";
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { SalonCodesModule } from "./modules/salon-codes/salon-codes.module";
     SeederModule,
     UploadsModule,
     SalonCodesModule,
+    RewardProductsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

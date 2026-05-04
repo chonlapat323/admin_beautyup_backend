@@ -1,8 +1,10 @@
 import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, UnauthorizedException } from "@nestjs/common";
+import { RewardProductsService } from "../reward-products/reward-products.service";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { MobileService } from "./mobile.service";
+
 
 class RegisterDto {
   @ApiProperty() @IsString() fullName!: string;
@@ -78,7 +80,10 @@ class CheckoutDto {
 @ApiTags("Mobile")
 @Controller("mobile")
 export class MobileController {
-  constructor(private readonly mobileService: MobileService) {}
+  constructor(
+    private readonly mobileService: MobileService,
+    private readonly rewardProductsService: RewardProductsService,
+  ) {}
 
   @Get("config")
   @ApiOperation({ summary: "Public app config (gateway fee etc.)" })
@@ -184,6 +189,19 @@ export class MobileController {
   async setDefaultAddress(@Headers("authorization") auth: string, @Param("id") id: string) {
     const member = await this.extractMember(auth);
     return this.mobileService.setDefaultAddress(member.id, id);
+  }
+
+  @Get("rewards")
+  @ApiOperation({ summary: "List active reward products" })
+  getRewards() {
+    return this.rewardProductsService.listActive();
+  }
+
+  @Post("rewards/:id/redeem")
+  @ApiOperation({ summary: "Redeem a reward product" })
+  async redeemReward(@Headers("authorization") auth: string, @Param("id") id: string) {
+    const member = await this.extractMember(auth);
+    return this.rewardProductsService.redeem(member.id, id);
   }
 
   private async extractMember(auth: string) {

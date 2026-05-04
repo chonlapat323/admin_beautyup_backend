@@ -123,6 +123,7 @@ model Member {
   orders               Order[]
   commissionsEarned    Commission[]       @relation("CommissionEarner")
   commissionPayouts    CommissionPayout[] @relation("MemberPayouts")
+  redemptions          RewardRedemption[] @relation("MemberRedemptions")
   sessions             MemberSession[]
   flowAccountContactId Int?
   createdAt            DateTime        @default(now())
@@ -322,6 +323,29 @@ model Commission {
   payout      CommissionPayout? @relation(fields: [payoutId], references: [id])
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+}
+
+model RewardProduct {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  imageUrl    String?
+  pointCost   Int
+  stock       Int                @default(0)
+  isActive    Boolean            @default(true)
+  redemptions RewardRedemption[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+model RewardRedemption {
+  id              String        @id @default(cuid())
+  memberId        String
+  member          Member        @relation("MemberRedemptions", fields: [memberId], references: [id])
+  rewardProductId String
+  rewardProduct   RewardProduct @relation(fields: [rewardProductId], references: [id])
+  pointsSpent     Int
+  createdAt       DateTime      @default(now())
 }
 
 model CommissionPayout {
