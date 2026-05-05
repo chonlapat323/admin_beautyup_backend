@@ -156,10 +156,14 @@ export class CommissionService {
     });
   }
 
-  async report(period: "day" | "week" | "month") {
+  async report(period: "day" | "week" | "month", fromStr?: string, toStr?: string) {
     const now = new Date();
     let from: Date;
-    if (period === "day") {
+    let to: Date | undefined;
+
+    if (fromStr) {
+      from = new Date(fromStr);
+    } else if (period === "day") {
       from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
     } else if (period === "week") {
       from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 13 * 7);
@@ -167,8 +171,15 @@ export class CommissionService {
       from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     }
 
+    if (toStr) {
+      to = new Date(new Date(toStr).setHours(23, 59, 59, 999));
+    }
+
     const rows = await this.prisma.commission.findMany({
-      where: { createdAt: { gte: from }, status: { not: "CANCELLED" } },
+      where: {
+        createdAt: { gte: from, ...(to ? { lte: to } : {}) },
+        status: { not: "CANCELLED" },
+      },
       include: { earner: { select: { id: true, fullName: true, memberType: true, referralCode: true } } },
       orderBy: { createdAt: "desc" },
     });

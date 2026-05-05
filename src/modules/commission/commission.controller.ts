@@ -92,10 +92,14 @@ export class CommissionController {
   constructor(private readonly commissionService: CommissionService) {}
 
   @Get("report")
-  @ApiOperation({ summary: "Commission report grouped by period" })
-  report(@Query("period") period: "day" | "week" | "month" = "day") {
+  @ApiOperation({ summary: "Commission report grouped by period with optional date range" })
+  report(
+    @Query("period") period: "day" | "week" | "month" = "day",
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
     const valid = ["day", "week", "month"];
-    return this.commissionService.report(valid.includes(period) ? period : "day");
+    return this.commissionService.report(valid.includes(period) ? period : "day", from, to);
   }
 
   @Get("settings")
