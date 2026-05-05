@@ -36,6 +36,24 @@ export class RewardProductsService {
     });
   }
 
+  async getRedemptions(from?: string, to?: string) {
+    const where: Record<string, unknown> = {};
+    if (from || to) {
+      where.createdAt = {
+        ...(from ? { gte: new Date(from) } : {}),
+        ...(to ? { lte: new Date(new Date(to).setHours(23, 59, 59, 999)) } : {}),
+      };
+    }
+    return this.prisma.rewardRedemption.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        member: { select: { id: true, fullName: true, email: true, phone: true } },
+        rewardProduct: { select: { id: true, name: true } },
+      },
+    });
+  }
+
   async redeem(memberId: string, rewardProductId: string) {
     const [member, product] = await Promise.all([
       this.prisma.member.findUnique({ where: { id: memberId } }),

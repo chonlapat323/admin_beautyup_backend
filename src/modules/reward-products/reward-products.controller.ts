@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min } from "class-validator";
 import { Type } from "class-transformer";
@@ -31,6 +31,12 @@ export class RewardProductsController {
   @ApiOperation({ summary: "List all reward products" })
   findAll() {
     return this.service.findAll();
+  }
+
+  @Get("redemptions")
+  @ApiOperation({ summary: "List redemption logs with optional date range" })
+  getRedemptions(@Query("from") from?: string, @Query("to") to?: string) {
+    return this.service.getRedemptions(from, to);
   }
 
   @Get(":id")
