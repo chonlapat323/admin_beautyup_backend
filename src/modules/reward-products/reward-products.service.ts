@@ -1,9 +1,32 @@
+import { existsSync, mkdirSync, renameSync } from "fs";
+import { join } from "path";
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class RewardProductsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  private get appUrl(): string {
+    return process.env.APP_URL || `http://localhost:${process.env.PORT ?? 3000}`;
+  }
+
+  private get rewardDir(): string {
+    return join(process.cwd(), "uploads", "rewards");
+  }
+
+  private get tempDir(): string {
+    return join(process.cwd(), "uploads", "temp");
+  }
+
+  private moveTempToReward(filename: string): string | null {
+    if (!existsSync(this.rewardDir)) mkdirSync(this.rewardDir, { recursive: true });
+    const src = join(this.tempDir, filename);
+    const dest = join(this.rewardDir, filename);
+    if (!existsSync(src)) return null;
+    renameSync(src, dest);
+    return `${this.appUrl}/uploads/rewards/${filename}`;
+  }
 
   findAll() {
     return this.prisma.rewardProduct.findMany({ orderBy: { createdAt: "desc" } });
@@ -15,13 +38,17 @@ export class RewardProductsService {
     return item;
   }
 
-  create(data: { name: string; description?: string; imageUrl?: string; pointCost: number; stock: number; isActive?: boolean }) {
-    return this.prisma.rewardProduct.create({ data });
+  create(data: { name: string; description?: string; imageUrl?: string; tempFile?: string; pointCost: number; stock: number; isActive?: boolean }) {
+    const { tempFile, ...rest } = data;
+    const imageUrl = tempFile ? (this.moveTempToReward(tempFile) ?? rest.imageUrl) : rest.imageUrl;
+    return this.prisma.rewardProduct.create({ data: { ...rest, imageUrl } });
   }
 
-  async update(id: string, data: Partial<{ name: string; description: string; imageUrl: string; pointCost: number; stock: number; isActive: boolean }>) {
+  async update(id: string, data: Partial<{ name: string; description: string; imageUrl: string; tempFile: string; pointCost: number; stock: number; isActive: boolean }>) {
     await this.findOne(id);
-    return this.prisma.rewardProduct.update({ where: { id }, data });
+    const { tempFile, ...rest } = data;
+    const imageUrl = tempFile ? (this.moveTempToReward(tempFile) ?? rest.imageUrl) : rest.imageUrl;
+    return this.prisma.rewardProduct.update({ where: { id }, data: { ...rest, imageUrl } });
   }
 
   async remove(id: string) {

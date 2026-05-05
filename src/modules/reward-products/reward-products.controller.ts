@@ -8,6 +8,7 @@ class CreateRewardProductDto {
   @ApiProperty() @IsString() name!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() imageUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tempFile?: string;
   @ApiProperty() @IsNumber() @Min(1) @Type(() => Number) pointCost!: number;
   @ApiProperty() @IsInt() @Min(0) @Type(() => Number) stock!: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
@@ -17,6 +18,7 @@ class UpdateRewardProductDto {
   @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() imageUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tempFile?: string;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(1) @Type(() => Number) pointCost?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Type(() => Number) stock?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
