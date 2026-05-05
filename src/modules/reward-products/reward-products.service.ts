@@ -1,7 +1,11 @@
-import { existsSync, mkdirSync, renameSync } from "fs";
+import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
 import { join } from "path";
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+
+type OrderedImageItem =
+  | { kind: "existing"; id: string }
+  | { kind: "temp"; filename: string };
 
 @Injectable()
 export class RewardProductsService {
@@ -28,27 +32,116 @@ export class RewardProductsService {
     return `${this.appUrl}/uploads/rewards/${filename}`;
   }
 
+  private deleteRewardImageFile(url: string): void {
+    try {
+      const filename = url.split("/").pop();
+      if (!filename) return;
+      const filePath = join(this.rewardDir, filename);
+      if (existsSync(filePath)) unlinkSync(filePath);
+    } catch {
+      // ignore
+    }
+  }
+
+  private async applyOrderedImages(rewardProductId: string, orderedImages: OrderedImageItem[]) {
+    const existing = await this.prisma.rewardProductImage.findMany({ where: { rewardProductId } });
+    const keptIds = new Set(
+      orderedImages.filter((i): i is { kind: "existing"; id: string } => i.kind === "existing").map((i) => i.id),
+    );
+
+    // Delete removed images
+    for (const img of existing) {
+      if (!keptIds.has(img.id)) {
+        this.deleteRewardImageFile(img.url);
+        await this.prisma.rewardProductImage.delete({ where: { id: img.id } });
+      }
+    }
+
+    // Upsert in order
+    let firstUrl: string | undefined;
+    for (let i = 0; i < orderedImages.length; i++) {
+      const item = orderedImages[i];
+      if (item.kind === "existing") {
+        await this.prisma.rewardProductImage.update({ where: { id: item.id }, data: { sortOrder: i } });
+        if (i === 0) firstUrl = existing.find((e) => e.id === item.id)?.url;
+      } else {
+        const url = this.moveTempToReward(item.filename);
+        if (!url) continue;
+        await this.prisma.rewardProductImage.create({ data: { rewardProductId, url, sortOrder: i } });
+        if (i === 0) firstUrl = url;
+      }
+    }
+
+    // Sync imageUrl to first image for mobile compat
+    if (firstUrl !== undefined) {
+      await this.prisma.rewardProduct.update({ where: { id: rewardProductId }, data: { imageUrl: firstUrl } });
+    } else if (orderedImages.length === 0) {
+      await this.prisma.rewardProduct.update({ where: { id: rewardProductId }, data: { imageUrl: null } });
+    }
+  }
+
+  private readonly IMAGE_INCLUDE = { images: { orderBy: { sortOrder: "asc" as const } } };
+
   findAll() {
-    return this.prisma.rewardProduct.findMany({ orderBy: { createdAt: "desc" } });
+    return this.prisma.rewardProduct.findMany({
+      orderBy: { createdAt: "desc" },
+      include: this.IMAGE_INCLUDE,
+    });
   }
 
   async findOne(id: string) {
-    const item = await this.prisma.rewardProduct.findUnique({ where: { id } });
+    const item = await this.prisma.rewardProduct.findUnique({
+      where: { id },
+      include: this.IMAGE_INCLUDE,
+    });
     if (!item) throw new NotFoundException("ไม่พบสินค้าแลกแต้ม");
     return item;
   }
 
-  create(data: { name: string; description?: string; imageUrl?: string; tempFile?: string; pointCost: number; stock: number; isActive?: boolean }) {
-    const { tempFile, ...rest } = data;
-    const imageUrl = tempFile ? (this.moveTempToReward(tempFile) ?? rest.imageUrl) : rest.imageUrl;
-    return this.prisma.rewardProduct.create({ data: { ...rest, imageUrl } });
+  async create(data: {
+    name: string;
+    description?: string;
+    pointCost: number;
+    stock: number;
+    isActive?: boolean;
+    tempFiles?: string[];
+  }) {
+    const { tempFiles, ...rest } = data;
+    const product = await this.prisma.rewardProduct.create({ data: rest });
+
+    if (tempFiles && tempFiles.length > 0) {
+      await this.applyOrderedImages(
+        product.id,
+        tempFiles.map((f) => ({ kind: "temp" as const, filename: f })),
+      );
+    }
+
+    return this.findOne(product.id);
   }
 
-  async update(id: string, data: Partial<{ name: string; description: string; imageUrl: string; tempFile: string; pointCost: number; stock: number; isActive: boolean }>) {
+  async update(
+    id: string,
+    data: Partial<{
+      name: string;
+      description: string;
+      pointCost: number;
+      stock: number;
+      isActive: boolean;
+      orderedImages: OrderedImageItem[];
+    }>,
+  ) {
     await this.findOne(id);
-    const { tempFile, ...rest } = data;
-    const imageUrl = tempFile ? (this.moveTempToReward(tempFile) ?? rest.imageUrl) : rest.imageUrl;
-    return this.prisma.rewardProduct.update({ where: { id }, data: { ...rest, imageUrl } });
+    const { orderedImages, ...rest } = data;
+
+    if (Object.keys(rest).length > 0) {
+      await this.prisma.rewardProduct.update({ where: { id }, data: rest });
+    }
+
+    if (orderedImages !== undefined) {
+      await this.applyOrderedImages(id, orderedImages);
+    }
+
+    return this.findOne(id);
   }
 
   async remove(id: string) {
@@ -60,6 +153,7 @@ export class RewardProductsService {
     return this.prisma.rewardProduct.findMany({
       where: { isActive: true, stock: { gt: 0 } },
       orderBy: { pointCost: "asc" },
+      include: this.IMAGE_INCLUDE,
     });
   }
 

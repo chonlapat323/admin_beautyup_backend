@@ -326,16 +326,27 @@ model Commission {
 }
 
 model RewardProduct {
-  id          String             @id @default(cuid())
+  id          String               @id @default(cuid())
   name        String
   description String?
   imageUrl    String?
   pointCost   Int
-  stock       Int                @default(0)
-  isActive    Boolean            @default(true)
+  stock       Int                  @default(0)
+  isActive    Boolean              @default(true)
+  images      RewardProductImage[]
   redemptions RewardRedemption[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+}
+
+model RewardProductImage {
+  id              String        @id @default(cuid())
+  rewardProductId String
+  rewardProduct   RewardProduct @relation(fields: [rewardProductId], references: [id], onDelete: Cascade)
+  url             String
+  sortOrder       Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 }
 
 model RewardRedemption {
