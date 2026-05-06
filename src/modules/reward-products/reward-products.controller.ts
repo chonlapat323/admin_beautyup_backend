@@ -60,7 +60,7 @@ export class RewardProductsController {
   @Patch(":id")
   @ApiOperation({ summary: "Update reward product" })
   update(@Param("id") id: string, @Body() dto: UpdateRewardProductDto) {
-    return this.service.update(id, dto);
+    return this.service.update(id, dto as any);
   }
 
   @Delete(":id")
