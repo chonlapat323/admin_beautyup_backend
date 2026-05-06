@@ -145,7 +145,12 @@ export class RewardProductsService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
+    const item = await this.findOne(id);
+    // Delete image files from disk before removing the DB record.
+    // (Cascade deletes the RewardProductImage rows, but not the actual files.)
+    for (const img of item.images) {
+      this.deleteRewardImageFile(img.url);
+    }
     return this.prisma.rewardProduct.delete({ where: { id } });
   }
 
@@ -176,17 +181,19 @@ export class RewardProductsService {
   }
 
   async redeem(memberId: string, rewardProductId: string) {
-    const [member, product] = await Promise.all([
-      this.prisma.member.findUnique({ where: { id: memberId } }),
-      this.prisma.rewardProduct.findUnique({ where: { id: rewardProductId } }),
-    ]);
-
-    if (!product || !product.isActive) throw new NotFoundException("ไม่พบสินค้าแลกแต้ม");
-    if (product.stock <= 0) throw new BadRequestException("สินค้าหมด");
-    if (!member) throw new NotFoundException("ไม่พบสมาชิก");
-    if (member.pointBalance < product.pointCost) throw new BadRequestException("แต้มไม่เพียงพอ");
-
     return this.prisma.$transaction(async (tx) => {
+      // Re-read inside the transaction to prevent TOCTOU race condition:
+      // concurrent redeems could both pass the checks outside and then double-decrement.
+      const [member, product] = await Promise.all([
+        tx.member.findUnique({ where: { id: memberId } }),
+        tx.rewardProduct.findUnique({ where: { id: rewardProductId } }),
+      ]);
+
+      if (!product || !product.isActive) throw new NotFoundException("ไม่พบสินค้าแลกแต้ม");
+      if (product.stock <= 0) throw new BadRequestException("สินค้าหมด");
+      if (!member) throw new NotFoundException("ไม่พบสมาชิก");
+      if (member.pointBalance < product.pointCost) throw new BadRequestException("แต้มไม่เพียงพอ");
+
       await tx.member.update({
         where: { id: memberId },
         data: { pointBalance: { decrement: product.pointCost } },

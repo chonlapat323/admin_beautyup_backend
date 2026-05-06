@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min } from "class-validator";
 import { Type } from "class-transformer";
 import { RewardProductsService } from "./reward-products.service";
 
@@ -14,7 +14,7 @@ class CreateRewardProductDto {
   @ApiProperty() @IsString() name!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsArray() @IsString({ each: true }) tempFiles?: string[];
-  @ApiProperty() @IsNumber() @Min(1) @Type(() => Number) pointCost!: number;
+  @ApiProperty() @IsInt() @Min(1) @Type(() => Number) pointCost!: number;
   @ApiProperty() @IsInt() @Min(0) @Type(() => Number) stock!: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
 }
@@ -23,7 +23,7 @@ class UpdateRewardProductDto {
   @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsArray() orderedImages?: OrderedImageItemDto[];
-  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(1) @Type(() => Number) pointCost?: number;
+  @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1) @Type(() => Number) pointCost?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) @Type(() => Number) stock?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
 }
