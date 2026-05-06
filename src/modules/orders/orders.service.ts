@@ -1,9 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { CommissionService } from "../commission/commission.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly commissionService: CommissionService,
@@ -78,7 +80,17 @@ export class OrdersService {
 
     // Create commission only when order is first marked as DELIVERED
     if (isFirstDelivered) {
-      await this.commissionService.createForOrder(id);
+      this.logger.log(`[Commission] triggering createForOrder for orderId=${id}`);
+      try {
+        const result = await this.commissionService.createForOrder(id);
+        if (result) {
+          this.logger.log(`[Commission] created id=${result.id} amount=${result.amount} earnerId=${result.earnerId}`);
+        } else {
+          this.logger.warn(`[Commission] skipped — order ${id} has no referrer`);
+        }
+      } catch (err) {
+        this.logger.error(`[Commission] FAILED for order ${id}: ${String(err)}`);
+      }
     }
 
     return { message: "Order status updated.", id: updated.id, status: updated.status };

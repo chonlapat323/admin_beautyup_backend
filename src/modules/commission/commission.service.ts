@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { CommissionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -7,6 +7,8 @@ const RATE_KEY = { SALON: "commission.rate.SALON", REGULAR: "commission.rate.REG
 
 @Injectable()
 export class CommissionService {
+  private readonly logger = new Logger(CommissionService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async getRates(): Promise<{ salon: number; regular: number }> {
@@ -37,20 +39,29 @@ export class CommissionService {
   }
 
   async createForOrder(orderId: string) {
+    this.logger.log(`[createForOrder] START orderId=${orderId}`);
+
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: { member: { include: { referredBy: true } } },
     });
 
-    if (!order?.member?.referredBy) return null;
+    this.logger.log(`[createForOrder] order=${order ? 'found' : 'NOT FOUND'} memberId=${order?.memberId ?? 'null'} referredBy=${order?.member?.referredBy?.id ?? 'null'}`);
+
+    if (!order?.member?.referredBy) {
+      this.logger.warn(`[createForOrder] SKIP — no referredBy for orderId=${orderId}`);
+      return null;
+    }
 
     const referrer = order.member.referredBy;
     const rates = await this.getRates();
     const rate = referrer.memberType === "SALON" ? rates.salon : rates.regular;
     const amount = (Number(order.totalAmount) * rate) / 100;
 
+    this.logger.log(`[createForOrder] referrerId=${referrer.id} memberType=${referrer.memberType} rate=${rate}% totalAmount=${order.totalAmount} amount=${Math.round(amount * 100) / 100}`);
+
     const now = new Date();
-    return this.prisma.commission.create({
+    const commission = await this.prisma.commission.create({
       data: {
         earnerId: referrer.id,
         orderId: order.id,
@@ -61,6 +72,9 @@ export class CommissionService {
         paidAt: now,
       },
     });
+
+    this.logger.log(`[createForOrder] SUCCESS commissionId=${commission.id}`);
+    return commission;
   }
 
   async findAll(params: {
