@@ -1,9 +1,13 @@
 import { Injectable } from "@nestjs/common";
+import { CommissionService } from "../commission/commission.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly commissionService: CommissionService,
+  ) {}
 
   async findAll() {
     return this.prisma.order.findMany({
@@ -43,9 +47,10 @@ export class OrdersService {
     });
     if (!order) throw new Error("Order not found");
 
+    const isFirstDelivered = status === "DELIVERED" && order.status !== "DELIVERED";
+
     const awardPoints =
-      status === "DELIVERED" &&
-      order.status !== "DELIVERED" &&
+      isFirstDelivered &&
       order.pointEarned > 0 &&
       order.memberId !== null;
 
@@ -70,6 +75,11 @@ export class OrdersService {
       }
       return updatedOrder;
     });
+
+    // Create commission only when order is first marked as DELIVERED
+    if (isFirstDelivered) {
+      await this.commissionService.createForOrder(id);
+    }
 
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }

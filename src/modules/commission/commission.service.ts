@@ -49,6 +49,7 @@ export class CommissionService {
     const rate = referrer.memberType === "SALON" ? rates.salon : rates.regular;
     const amount = (Number(order.totalAmount) * rate) / 100;
 
+    const now = new Date();
     return this.prisma.commission.create({
       data: {
         earnerId: referrer.id,
@@ -56,6 +57,8 @@ export class CommissionService {
         orderAmount: order.totalAmount,
         rate,
         amount: Math.round(amount * 100) / 100,
+        status: CommissionStatus.PAID,
+        paidAt: now,
       },
     });
   }
@@ -65,10 +68,18 @@ export class CommissionService {
     earnerId?: string;
     page: number;
     pageSize: number;
+    from?: string;
+    to?: string;
   }) {
     const where: Record<string, unknown> = {};
     if (params.status) where.status = params.status;
     if (params.earnerId) where.earnerId = params.earnerId;
+    if (params.from || params.to) {
+      where.createdAt = {
+        ...(params.from ? { gte: new Date(params.from) } : {}),
+        ...(params.to ? { lte: new Date(new Date(params.to).setHours(23, 59, 59, 999)) } : {}),
+      };
+    }
 
     const [items, totalItems] = await this.prisma.$transaction([
       this.prisma.commission.findMany({
@@ -184,7 +195,6 @@ export class CommissionService {
       orderBy: { createdAt: "desc" },
     });
 
-    // group by period bucket + earner
     const bucketMap = new Map<string, {
       bucket: string;
       earnerId: string;

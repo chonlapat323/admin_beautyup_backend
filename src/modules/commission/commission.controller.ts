@@ -27,6 +27,16 @@ class ListCommissionsQueryDto {
   @Type(() => Number)
   @IsInt()
   pageSize?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  from?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  to?: string;
 }
 
 class UpdateRatesDto {
@@ -122,6 +132,8 @@ export class CommissionController {
       earnerId: query.earnerId,
       page: query.page && query.page > 0 ? query.page : 1,
       pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 20,
+      from: query.from,
+      to: query.to,
     });
   }
 

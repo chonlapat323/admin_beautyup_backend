@@ -250,8 +250,7 @@ export class MobileService {
       ),
     ]);
 
-    await this.commissionService.createForOrder(order.id);
-
+    // Commission is created when order status changes to DELIVERED (not at checkout)
     // sync to FlowAccount in background — failure does not block checkout
     this.syncOrderToFlowAccount(order, memberId).catch((err) =>
       this.logger.error(`[FlowAccount order sync] FAILED for order ${order.id}: ${String(err)}`),
@@ -548,7 +547,7 @@ export class MobileService {
       ]);
 
       await this.prisma.pendingCheckout.delete({ where: { chargeId } });
-      await this.commissionService.createForOrder(order.id);
+      // Commission is created when order status changes to DELIVERED (not at checkout)
       this.syncOrderToFlowAccount(order, memberId).catch((err) =>
         this.logger.error(`[FlowAccount promptpay sync] FAILED: ${String(err)}`),
       );
