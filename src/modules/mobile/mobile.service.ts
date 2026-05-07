@@ -643,10 +643,29 @@ export class MobileService {
   }
 
   async getCreditTransactions(memberId: string) {
-    return this.prisma.creditTransaction.findMany({
+    const txs = await this.prisma.creditTransaction.findMany({
       where: { memberId },
       orderBy: { createdAt: "desc" },
       take: 100,
+    });
+
+    const earnRefIds = txs
+      .filter((tx) => tx.type === "EARN" && tx.refId)
+      .map((tx) => tx.refId as string);
+
+    if (earnRefIds.length === 0) return txs;
+
+    const orders = await this.prisma.order.findMany({
+      where: { id: { in: earnRefIds } },
+      select: { id: true, orderNumber: true },
+    });
+    const orderMap = new Map(orders.map((o) => [o.id, o.orderNumber]));
+
+    return txs.map((tx) => {
+      if (tx.type === "EARN" && tx.refId && orderMap.has(tx.refId)) {
+        return { ...tx, note: `Commission จากออเดอร์ ${orderMap.get(tx.refId)}` };
+      }
+      return tx;
     });
   }
 
