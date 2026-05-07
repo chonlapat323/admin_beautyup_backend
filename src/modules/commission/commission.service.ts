@@ -84,7 +84,7 @@ export class CommissionService {
           memberId: referrer.id,
           type: CreditTransactionType.EARN,
           amount: roundedAmount,
-          note: `Commission จากออเดอร์ ${order.id}`,
+          note: `Commission จากออเดอร์ ${order.orderNumber}`,
           refId: order.id,
         },
       });
