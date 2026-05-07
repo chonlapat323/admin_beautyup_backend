@@ -70,6 +70,18 @@ class WithdrawalDto {
   @Min(1)
   @Type(() => Number)
   amount!: number;
+
+  @ApiProperty({ description: "ชื่อธนาคาร" })
+  @IsString()
+  bankName!: string;
+
+  @ApiProperty({ description: "เลขที่บัญชี" })
+  @IsString()
+  bankAccountNumber!: string;
+
+  @ApiProperty({ description: "ชื่อบัญชี" })
+  @IsString()
+  bankAccountName!: string;
 }
 
 class CheckoutDto {
@@ -198,7 +210,13 @@ export class MobileController {
   @ApiOperation({ summary: "Request credit withdrawal" })
   async requestWithdrawal(@Headers("authorization") auth: string, @Body() dto: WithdrawalDto) {
     const member = await this.extractMember(auth);
-    return this.mobileService.requestWithdrawal(member.id, dto.amount);
+    return this.mobileService.requestWithdrawal(
+      member.id,
+      dto.amount,
+      dto.bankName,
+      dto.bankAccountNumber,
+      dto.bankAccountName,
+    );
   }
 
   @Get("me/withdrawals")

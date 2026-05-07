@@ -650,7 +650,13 @@ export class MobileService {
     });
   }
 
-  async requestWithdrawal(memberId: string, amount: number) {
+  async requestWithdrawal(
+    memberId: string,
+    amount: number,
+    bankName: string,
+    bankAccountNumber: string,
+    bankAccountName: string,
+  ) {
     const member = await this.prisma.member.findUnique({
       where: { id: memberId },
       select: { creditBalance: true },
@@ -667,7 +673,7 @@ export class MobileService {
         data: { creditBalance: { decrement: amount } },
       });
       const request = await tx.withdrawalRequest.create({
-        data: { memberId, amount },
+        data: { memberId, amount, bankName, bankAccountNumber, bankAccountName },
       });
       await tx.creditTransaction.create({
         data: {
