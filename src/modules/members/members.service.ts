@@ -234,6 +234,14 @@ export class MembersService {
     return updated;
   }
 
+  async getCreditTransactions(memberId: string) {
+    return this.prisma.creditTransaction.findMany({
+      where: { memberId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  }
+
   async remove(id: string) {
     await this.findOne(id);
     try {

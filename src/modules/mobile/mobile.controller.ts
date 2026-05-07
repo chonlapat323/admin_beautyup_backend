@@ -61,6 +61,7 @@ class PromptPayDto {
   @ApiProperty() @IsString() shippingName!: string;
   @ApiProperty() @IsString() shippingPhone!: string;
   @ApiProperty() @IsString() shippingAddr!: string;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Type(() => Number) creditAmount?: number;
 }
 
 class WithdrawalDto {
@@ -81,8 +82,9 @@ class CheckoutDto {
   @ApiProperty() @IsString() shippingName!: string;
   @ApiProperty() @IsString() shippingPhone!: string;
   @ApiProperty() @IsString() shippingAddr!: string;
-  @ApiProperty({ description: "Omise card token from client-side tokenization" })
-  @IsString() omiseToken!: string;
+  @ApiPropertyOptional({ description: "Omise card token (ไม่จำเป็นถ้าใช้ credit ครอบคลุมทั้งหมด)" })
+  @IsOptional() @IsString() omiseToken?: string;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Type(() => Number) creditAmount?: number;
 }
 
 @ApiTags("Mobile")

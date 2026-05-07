@@ -164,7 +164,8 @@ export class MobileService {
     shippingName: string;
     shippingPhone: string;
     shippingAddr: string;
-    omiseToken: string;
+    omiseToken?: string;
+    creditAmount?: number;
   }) {
     const productIds = payload.items.map((i) => i.productId);
     const products = await this.prisma.product.findMany({
@@ -200,24 +201,43 @@ export class MobileService {
     const gatewayFee = await this.settingsService.getValue("gateway_fee");
     const totalAmount = subtotal + shippingAmount + gatewayFee;
 
-    // ── Charge via Omise (throws on failure — order is NOT created) ─────────────
-    let charge: Awaited<ReturnType<typeof this.omiseService.createCharge>>;
-    try {
-      charge = await this.omiseService.createCharge({
-        token: payload.omiseToken,
-        amountTHB: totalAmount,
-        description: `Beauty Up order for ${payload.shippingName}`,
+    // ── Credit validation ────────────────────────────────────────────────────────
+    const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
+    if (creditAmount > 0) {
+      const memberData = await this.prisma.member.findUnique({
+        where: { id: memberId },
+        select: { creditBalance: true },
       });
-    } catch (err) {
-      throw new BadRequestException(
-        err instanceof Error ? err.message : "การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
-      );
+      if (Number(memberData?.creditBalance ?? 0) < creditAmount) {
+        throw new BadRequestException("ยอด Credit ไม่เพียงพอ");
+      }
     }
 
-    if (charge.status !== "successful") {
-      throw new BadRequestException(
-        charge.failure_message ?? "การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
-      );
+    // ── Omise charge (only if credit doesn't cover full amount) ─────────────────
+    const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
+    let chargeId: string | undefined;
+    if (chargeAmount > 0) {
+      if (!payload.omiseToken) {
+        throw new BadRequestException("กรุณาระบุข้อมูลบัตรชำระเงิน");
+      }
+      let charge: Awaited<ReturnType<typeof this.omiseService.createCharge>>;
+      try {
+        charge = await this.omiseService.createCharge({
+          token: payload.omiseToken,
+          amountTHB: chargeAmount,
+          description: `Beauty Up order for ${payload.shippingName}`,
+        });
+      } catch (err) {
+        throw new BadRequestException(
+          err instanceof Error ? err.message : "การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        );
+      }
+      if (charge.status !== "successful") {
+        throw new BadRequestException(
+          charge.failure_message ?? "การชำระเงินไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        );
+      }
+      chargeId = charge.id;
     }
 
     const pointTiers = await this.settingsService.getPointTiers();
@@ -237,7 +257,7 @@ export class MobileService {
           shippingName: payload.shippingName,
           shippingPhone: payload.shippingPhone,
           shippingAddr: payload.shippingAddr,
-          chargeId: charge.id,
+          chargeId,
           items: { create: orderItems },
         },
         include: { items: true },
@@ -251,13 +271,20 @@ export class MobileService {
       ...(pointEarned > 0
         ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
         : []),
+      ...(creditAmount > 0
+        ? [this.prisma.member.update({ where: { id: memberId }, data: { creditBalance: { decrement: creditAmount } } })]
+        : []),
     ]);
 
-    // Trigger commission on PAID
+    if (creditAmount > 0) {
+      this.prisma.creditTransaction.create({
+        data: { memberId, type: "USE", amount: creditAmount, note: `ใช้ credit ชำระออเดอร์ ${order.orderNumber}`, refId: order.id },
+      }).catch((err) => this.logger.error(`[Credit] USE log FAILED: ${String(err)}`));
+    }
+
     this.commissionService.createForOrder(order.id).catch((err) =>
       this.logger.error(`[Commission] FAILED for order ${order.id}: ${String(err)}`),
     );
-    // sync to FlowAccount in background — failure does not block checkout
     this.syncOrderToFlowAccount(order, memberId).catch((err) =>
       this.logger.error(`[FlowAccount order sync] FAILED for order ${order.id}: ${String(err)}`),
     );
@@ -434,6 +461,7 @@ export class MobileService {
     shippingName: string;
     shippingPhone: string;
     shippingAddr: string;
+    creditAmount?: number;
   }): Promise<{ chargeId: string; svgContent: string; expiresAt: string }> {
     const productIds = payload.items.map((i) => i.productId);
     const products = await this.prisma.product.findMany({
@@ -467,11 +495,20 @@ export class MobileService {
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
     const gatewayFee = await this.settingsService.getValue("gateway_fee");
     const totalAmount = subtotal + gatewayFee;
+    const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
+    const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
+
+    if (creditAmount > 0) {
+      const memberData = await this.prisma.member.findUnique({ where: { id: memberId }, select: { creditBalance: true, fullName: true } });
+      if (Number(memberData?.creditBalance ?? 0) < creditAmount) {
+        throw new BadRequestException("ยอด Credit ไม่เพียงพอ");
+      }
+    }
 
     const member = await this.prisma.member.findUnique({ where: { id: memberId }, select: { fullName: true } });
 
     const result = await this.omiseService.createPromptPayCharge({
-      amountTHB: totalAmount,
+      amountTHB: chargeAmount > 0 ? chargeAmount : 1,
       description: `Beauty Up order for ${member?.fullName ?? memberId}`,
     });
 
@@ -484,6 +521,7 @@ export class MobileService {
           subtotal,
           gatewayFee,
           totalAmount,
+          creditAmount,
           shippingName: payload.shippingName,
           shippingPhone: payload.shippingPhone,
           shippingAddr: payload.shippingAddr,
@@ -516,11 +554,13 @@ export class MobileService {
         subtotal: number;
         gatewayFee: number;
         totalAmount: number;
+        creditAmount?: number;
         shippingName: string;
         shippingPhone: string;
         shippingAddr: string;
       };
       const data = pending.checkoutData as CheckoutData;
+      const creditAmount = data.creditAmount ?? 0;
 
       const pointTiers = await this.settingsService.getPointTiers();
       const pointEarned = SettingsService.calculatePoints(data.subtotal, pointTiers);
@@ -553,7 +593,16 @@ export class MobileService {
         ...(pointEarned > 0
           ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
           : []),
+        ...(creditAmount > 0
+          ? [this.prisma.member.update({ where: { id: memberId }, data: { creditBalance: { decrement: creditAmount } } })]
+          : []),
       ]);
+
+      if (creditAmount > 0) {
+        this.prisma.creditTransaction.create({
+          data: { memberId, type: "USE", amount: creditAmount, note: `ใช้ credit ชำระออเดอร์ ${order.orderNumber}`, refId: order.id },
+        }).catch((err) => this.logger.error(`[Credit] USE log FAILED: ${String(err)}`));
+      }
 
       await this.prisma.pendingCheckout.delete({ where: { chargeId } });
       // Trigger commission on PAID

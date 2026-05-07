@@ -206,4 +206,10 @@ export class MembersController {
   setDefaultAddress(@Param("id") id: string, @Param("aid") aid: string) {
     return this.membersService.setDefaultAddress(id, aid);
   }
+
+  @Get(":id/credit-transactions")
+  @ApiOperation({ summary: "Get credit transaction history for member" })
+  getCreditTransactions(@Param("id") id: string) {
+    return this.membersService.getCreditTransactions(id);
+  }
 }
