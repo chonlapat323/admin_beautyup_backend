@@ -50,6 +50,7 @@ export class OrdersService {
     if (!order) throw new Error("Order not found");
 
     const isFirstDelivered = status === "DELIVERED" && order.status !== "DELIVERED";
+    const isFirstPaid = status === "PAID" && order.status !== "PAID";
 
     const awardPoints =
       isFirstDelivered &&
@@ -78,8 +79,8 @@ export class OrdersService {
       return updatedOrder;
     });
 
-    // Create commission only when order is first marked as DELIVERED
-    if (isFirstDelivered) {
+    // Create commission when order is first marked as PAID
+    if (isFirstPaid) {
       this.logger.log(`[Commission] triggering createForOrder for orderId=${id}`);
       try {
         const result = await this.commissionService.createForOrder(id);
