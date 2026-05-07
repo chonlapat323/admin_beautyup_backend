@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { CommissionStatus } from "@prisma/client";
 import { IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
@@ -184,13 +184,20 @@ export class CommissionController {
 
   @Patch("withdrawals/:id/approve")
   @ApiOperation({ summary: "Approve a withdrawal request" })
-  approveWithdrawal(@Param("id") id: string) {
-    return this.commissionService.approveWithdrawal(id);
+  approveWithdrawal(
+    @Param("id") id: string,
+    @Headers("x-processed-by") processedByEmail?: string,
+  ) {
+    return this.commissionService.approveWithdrawal(id, processedByEmail);
   }
 
   @Patch("withdrawals/:id/reject")
   @ApiOperation({ summary: "Reject a withdrawal request and refund creditBalance" })
-  rejectWithdrawal(@Param("id") id: string, @Body() dto: RejectWithdrawalDto) {
-    return this.commissionService.rejectWithdrawal(id, dto.note);
+  rejectWithdrawal(
+    @Param("id") id: string,
+    @Body() dto: RejectWithdrawalDto,
+    @Headers("x-processed-by") processedByEmail?: string,
+  ) {
+    return this.commissionService.rejectWithdrawal(id, dto.note, processedByEmail);
   }
 }

@@ -203,28 +203,28 @@ export class CommissionService {
     const where = status && status !== "all" ? { status: status as never } : {};
     return this.prisma.withdrawalRequest.findMany({
       where,
-      include: { member: { select: { id: true, fullName: true, phone: true, email: true } } },
+      include: { member: { select: { id: true, fullName: true, phone: true, email: true, memberType: true } } },
       orderBy: { createdAt: "desc" },
     });
   }
 
-  async approveWithdrawal(id: string) {
+  async approveWithdrawal(id: string, processedByEmail?: string) {
     const req = await this.prisma.withdrawalRequest.findUnique({ where: { id } });
     if (!req || req.status !== "PENDING") throw new Error("ไม่พบรายการหรือไม่อยู่ในสถานะรอดำเนินการ");
     return this.prisma.withdrawalRequest.update({
       where: { id },
-      data: { status: "APPROVED", processedAt: new Date() },
+      data: { status: "APPROVED", processedAt: new Date(), processedByEmail },
     });
   }
 
-  async rejectWithdrawal(id: string, note?: string) {
+  async rejectWithdrawal(id: string, note?: string, processedByEmail?: string) {
     const req = await this.prisma.withdrawalRequest.findUnique({ where: { id } });
     if (!req || req.status !== "PENDING") throw new Error("ไม่พบรายการหรือไม่อยู่ในสถานะรอดำเนินการ");
 
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.withdrawalRequest.update({
         where: { id },
-        data: { status: "REJECTED", note, processedAt: new Date() },
+        data: { status: "REJECTED", note, processedAt: new Date(), processedByEmail },
       });
       await tx.member.update({
         where: { id: req.memberId },

@@ -407,11 +407,12 @@ model WithdrawalRequest {
   member             Member           @relation(fields: [memberId], references: [id])
   amount             Decimal          @db.Decimal(10, 2)
   status             WithdrawalStatus @default(PENDING)
-  note               String?
-  bankName           String?
-  bankAccountNumber  String?
-  bankAccountName    String?
-  processedAt        DateTime?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  note                String?
+  bankName            String?
+  bankAccountNumber   String?
+  bankAccountName     String?
+  processedAt         DateTime?
+  processedByEmail    String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 }
