@@ -1,12 +1,24 @@
 import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class PaymentsService {
-  findAll() {
-    return [
-      { orderNumber: "BU-24003", method: "PROMPTPAY_QR", status: "SUCCESS", amount: 69 },
-      { orderNumber: "BU-24031", method: "CARD", status: "PAID", amount: 120 },
-    ];
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll() {
+    const orders = await this.prisma.order.findMany({
+      where: {
+        status: { not: "CANCELLED" },
+        paymentMethod: { not: null },
+      },
+      select: { paymentMethod: true, totalAmount: true },
+    });
+
+    return orders.map((o) => ({
+      method: o.paymentMethod!,
+      status: "PAID",
+      amount: Number(o.totalAmount),
+    }));
   }
 
   retry(orderId: string) {
