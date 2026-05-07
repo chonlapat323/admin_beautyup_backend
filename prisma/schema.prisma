@@ -265,6 +265,7 @@ model Order {
   shippingPhone  String?
   shippingAddr   String?
   chargeId              String?
+  paymentMethod         String?
   flowAccountDocId      Int?
   flowAccountReceiptId  Int?
   items               OrderItem[]

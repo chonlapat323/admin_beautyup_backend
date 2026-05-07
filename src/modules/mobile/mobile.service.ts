@@ -243,6 +243,8 @@ export class MobileService {
     const pointTiers = await this.settingsService.getPointTiers();
     const pointEarned = SettingsService.calculatePoints(subtotal, pointTiers);
 
+    const paymentMethod = creditAmount >= totalAmount ? "CREDIT" : payload.omiseToken ? "CARD" : "CREDIT";
+
     const [order] = await this.prisma.$transaction([
       this.prisma.order.create({
         data: {
@@ -258,6 +260,7 @@ export class MobileService {
           shippingPhone: payload.shippingPhone,
           shippingAddr: payload.shippingAddr,
           chargeId,
+          paymentMethod,
           items: { create: orderItems },
         },
         include: { items: true },
@@ -565,6 +568,8 @@ export class MobileService {
       const pointTiers = await this.settingsService.getPointTiers();
       const pointEarned = SettingsService.calculatePoints(data.subtotal, pointTiers);
 
+      const qrPaymentMethod = creditAmount >= data.totalAmount ? "CREDIT" : "PROMPTPAY";
+
       const [order] = await this.prisma.$transaction([
         this.prisma.order.create({
           data: {
@@ -580,6 +585,7 @@ export class MobileService {
             shippingPhone: data.shippingPhone,
             shippingAddr: data.shippingAddr,
             chargeId,
+            paymentMethod: qrPaymentMethod,
             items: { create: data.items },
           },
           include: { items: true },
