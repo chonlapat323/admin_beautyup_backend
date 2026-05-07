@@ -689,7 +689,7 @@ export class MobileService {
     return this.prisma.$transaction(async (tx) => {
       await tx.member.update({
         where: { id: memberId },
-        data: { creditBalance: { decrement: amount } },
+        data: { creditBalance: { decrement: amount }, bankName, bankAccountNumber, bankAccountName },
       });
       const request = await tx.withdrawalRequest.create({
         data: { memberId, amount, bankName, bankAccountNumber, bankAccountName },
@@ -714,6 +714,14 @@ export class MobileService {
     });
   }
 
+  async updateBankAccount(memberId: string, bankName: string, bankAccountNumber: string, bankAccountName: string) {
+    await this.prisma.member.update({
+      where: { id: memberId },
+      data: { bankName, bankAccountNumber, bankAccountName },
+    });
+    return { message: "บันทึกบัญชีธนาคารแล้ว" };
+  }
+
   private safeProfile(member: {
     id: string;
     fullName: string;
@@ -733,6 +741,9 @@ export class MobileService {
       pointBalance: member.pointBalance,
       creditBalance: Number(member.creditBalance),
       referralCode: (member.referralCode as string | null) ?? null,
+      bankName: (member.bankName as string | null) ?? null,
+      bankAccountNumber: (member.bankAccountNumber as string | null) ?? null,
+      bankAccountName: (member.bankAccountName as string | null) ?? null,
     };
   }
 }

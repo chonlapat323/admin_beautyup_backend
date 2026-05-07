@@ -124,6 +124,9 @@ model Member {
   isActive             Boolean         @default(true)
   pointBalance         Int             @default(0)
   creditBalance        Decimal         @default(0) @db.Decimal(10, 2)
+  bankName             String?
+  bankAccountNumber    String?
+  bankAccountName      String?
   referralCode         String?         @unique
   referredById         String?
   referredBy           Member?         @relation("MemberReferral", fields: [referredById], references: [id])

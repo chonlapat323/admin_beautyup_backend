@@ -64,6 +64,12 @@ class PromptPayDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Type(() => Number) creditAmount?: number;
 }
 
+class BankAccountDto {
+  @ApiProperty() @IsString() bankName!: string;
+  @ApiProperty() @IsString() bankAccountNumber!: string;
+  @ApiProperty() @IsString() bankAccountName!: string;
+}
+
 class WithdrawalDto {
   @ApiProperty({ description: "จำนวน credit ที่ต้องการถอน" })
   @IsNumber()
@@ -224,6 +230,13 @@ export class MobileController {
   async getWithdrawals(@Headers("authorization") auth: string) {
     const member = await this.extractMember(auth);
     return this.mobileService.getWithdrawals(member.id);
+  }
+
+  @Patch("me/bank-account")
+  @ApiOperation({ summary: "Save member bank account" })
+  async updateBankAccount(@Headers("authorization") auth: string, @Body() dto: BankAccountDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.updateBankAccount(member.id, dto.bankName, dto.bankAccountNumber, dto.bankAccountName);
   }
 
   @Delete("addresses/:id")
