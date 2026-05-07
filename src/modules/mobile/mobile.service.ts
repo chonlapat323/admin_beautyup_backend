@@ -248,9 +248,15 @@ export class MobileService {
           data: { sellableStock: { decrement: item.quantity } },
         }),
       ),
+      ...(pointEarned > 0
+        ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
+        : []),
     ]);
 
-    // Commission is created when order status changes to DELIVERED (not at checkout)
+    // Trigger commission on PAID
+    this.commissionService.createForOrder(order.id).catch((err) =>
+      this.logger.error(`[Commission] FAILED for order ${order.id}: ${String(err)}`),
+    );
     // sync to FlowAccount in background — failure does not block checkout
     this.syncOrderToFlowAccount(order, memberId).catch((err) =>
       this.logger.error(`[FlowAccount order sync] FAILED for order ${order.id}: ${String(err)}`),
@@ -544,10 +550,16 @@ export class MobileService {
             data: { sellableStock: { decrement: item.quantity } },
           }),
         ),
+        ...(pointEarned > 0
+          ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
+          : []),
       ]);
 
       await this.prisma.pendingCheckout.delete({ where: { chargeId } });
-      // Commission is created when order status changes to DELIVERED (not at checkout)
+      // Trigger commission on PAID
+      this.commissionService.createForOrder(order.id).catch((err) =>
+        this.logger.error(`[Commission] FAILED for order ${order.id}: ${String(err)}`),
+      );
       this.syncOrderToFlowAccount(order, memberId).catch((err) =>
         this.logger.error(`[FlowAccount promptpay sync] FAILED: ${String(err)}`),
       );
