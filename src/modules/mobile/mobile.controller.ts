@@ -1,7 +1,7 @@
 import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, UnauthorizedException } from "@nestjs/common";
 import { RewardProductsService } from "../reward-products/reward-products.service";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { MobileService } from "./mobile.service";
 
@@ -61,6 +61,14 @@ class PromptPayDto {
   @ApiProperty() @IsString() shippingName!: string;
   @ApiProperty() @IsString() shippingPhone!: string;
   @ApiProperty() @IsString() shippingAddr!: string;
+}
+
+class WithdrawalDto {
+  @ApiProperty({ description: "จำนวน credit ที่ต้องการถอน" })
+  @IsNumber()
+  @Min(1)
+  @Type(() => Number)
+  amount!: number;
 }
 
 class CheckoutDto {
@@ -175,6 +183,27 @@ export class MobileController {
   async getCommissionSummary(@Headers("authorization") auth: string) {
     const member = await this.extractMember(auth);
     return this.mobileService.getCommissionSummary(member.id);
+  }
+
+  @Get("me/credit-transactions")
+  @ApiOperation({ summary: "Get credit transaction history" })
+  async getCreditTransactions(@Headers("authorization") auth: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.getCreditTransactions(member.id);
+  }
+
+  @Post("me/withdraw")
+  @ApiOperation({ summary: "Request credit withdrawal" })
+  async requestWithdrawal(@Headers("authorization") auth: string, @Body() dto: WithdrawalDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.requestWithdrawal(member.id, dto.amount);
+  }
+
+  @Get("me/withdrawals")
+  @ApiOperation({ summary: "Get withdrawal request history" })
+  async getWithdrawals(@Headers("authorization") auth: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.getWithdrawals(member.id);
   }
 
   @Delete("addresses/:id")

@@ -587,6 +587,53 @@ export class MobileService {
     return this.commissionService.summary(memberId);
   }
 
+  async getCreditTransactions(memberId: string) {
+    return this.prisma.creditTransaction.findMany({
+      where: { memberId },
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    });
+  }
+
+  async requestWithdrawal(memberId: string, amount: number) {
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      select: { creditBalance: true },
+    });
+    if (!member) throw new BadRequestException("ไม่พบสมาชิก");
+
+    if (Number(member.creditBalance) < amount) {
+      throw new BadRequestException("ยอด Credit ไม่เพียงพอ");
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.member.update({
+        where: { id: memberId },
+        data: { creditBalance: { decrement: amount } },
+      });
+      const request = await tx.withdrawalRequest.create({
+        data: { memberId, amount },
+      });
+      await tx.creditTransaction.create({
+        data: {
+          memberId,
+          type: "WITHDRAW",
+          amount,
+          note: "ขอถอน credit",
+          refId: request.id,
+        },
+      });
+      return request;
+    });
+  }
+
+  async getWithdrawals(memberId: string) {
+    return this.prisma.withdrawalRequest.findMany({
+      where: { memberId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
   private safeProfile(member: {
     id: string;
     fullName: string;
@@ -594,6 +641,7 @@ export class MobileService {
     phone: string | null;
     memberType: string;
     pointBalance: number;
+    creditBalance: unknown;
     [key: string]: unknown;
   }) {
     return {
@@ -603,6 +651,7 @@ export class MobileService {
       phone: member.phone,
       memberType: member.memberType,
       pointBalance: member.pointBalance,
+      creditBalance: Number(member.creditBalance),
       referralCode: (member.referralCode as string | null) ?? null,
     };
   }

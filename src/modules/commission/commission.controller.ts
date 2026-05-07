@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { CommissionStatus } from "@prisma/client";
-import { IsArray, IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsArray, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 import { Type } from "class-transformer";
 import { CommissionService } from "./commission.service";
 
@@ -75,6 +75,13 @@ class MarkPaidDto {
   @IsOptional()
   @IsString()
   reference?: string;
+}
+
+class RejectWithdrawalDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
 
 class ListPayoutsQueryDto {
@@ -167,5 +174,23 @@ export class CommissionController {
   @ApiOperation({ summary: "Cancel a commission" })
   cancel(@Param("id") id: string) {
     return this.commissionService.cancel(id);
+  }
+
+  @Get("withdrawals")
+  @ApiOperation({ summary: "List all withdrawal requests" })
+  listWithdrawals(@Query("status") status?: string) {
+    return this.commissionService.listWithdrawals(status);
+  }
+
+  @Patch("withdrawals/:id/approve")
+  @ApiOperation({ summary: "Approve a withdrawal request" })
+  approveWithdrawal(@Param("id") id: string) {
+    return this.commissionService.approveWithdrawal(id);
+  }
+
+  @Patch("withdrawals/:id/reject")
+  @ApiOperation({ summary: "Reject a withdrawal request and refund creditBalance" })
+  rejectWithdrawal(@Param("id") id: string, @Body() dto: RejectWithdrawalDto) {
+    return this.commissionService.rejectWithdrawal(id, dto.note);
   }
 }

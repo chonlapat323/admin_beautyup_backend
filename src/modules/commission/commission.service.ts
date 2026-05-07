@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { CommissionStatus } from "@prisma/client";
+import { CommissionStatus, CreditTransactionType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 const DEFAULT_RATES = { SALON: 10, REGULAR: 5 };
@@ -61,19 +61,37 @@ export class CommissionService {
     this.logger.log(`[createForOrder] referrerId=${referrer.id} memberType=${referrer.memberType} rate=${rate}% totalAmount=${order.totalAmount} amount=${Math.round(amount * 100) / 100}`);
 
     const now = new Date();
-    const commission = await this.prisma.commission.create({
-      data: {
-        earnerId: referrer.id,
-        orderId: order.id,
-        orderAmount: order.totalAmount,
-        rate,
-        amount: Math.round(amount * 100) / 100,
-        status: CommissionStatus.PAID,
-        paidAt: now,
-      },
+    const roundedAmount = Math.round(amount * 100) / 100;
+
+    const commission = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.commission.create({
+        data: {
+          earnerId: referrer.id,
+          orderId: order.id,
+          orderAmount: order.totalAmount,
+          rate,
+          amount: roundedAmount,
+          status: CommissionStatus.PAID,
+          paidAt: now,
+        },
+      });
+      await tx.member.update({
+        where: { id: referrer.id },
+        data: { creditBalance: { increment: roundedAmount } },
+      });
+      await tx.creditTransaction.create({
+        data: {
+          memberId: referrer.id,
+          type: CreditTransactionType.EARN,
+          amount: roundedAmount,
+          note: `Commission จากออเดอร์ ${order.id}`,
+          refId: order.id,
+        },
+      });
+      return created;
     });
 
-    this.logger.log(`[createForOrder] SUCCESS commissionId=${commission.id}`);
+    this.logger.log(`[createForOrder] SUCCESS commissionId=${commission.id} creditAdded=${roundedAmount}`);
     return commission;
   }
 
@@ -178,6 +196,50 @@ export class CommissionService {
     return this.prisma.commission.update({
       where: { id },
       data: { status: CommissionStatus.CANCELLED },
+    });
+  }
+
+  async listWithdrawals(status?: string) {
+    const where = status && status !== "all" ? { status: status as never } : {};
+    return this.prisma.withdrawalRequest.findMany({
+      where,
+      include: { member: { select: { id: true, fullName: true, phone: true, email: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async approveWithdrawal(id: string) {
+    const req = await this.prisma.withdrawalRequest.findUnique({ where: { id } });
+    if (!req || req.status !== "PENDING") throw new Error("ไม่พบรายการหรือไม่อยู่ในสถานะรอดำเนินการ");
+    return this.prisma.withdrawalRequest.update({
+      where: { id },
+      data: { status: "APPROVED", processedAt: new Date() },
+    });
+  }
+
+  async rejectWithdrawal(id: string, note?: string) {
+    const req = await this.prisma.withdrawalRequest.findUnique({ where: { id } });
+    if (!req || req.status !== "PENDING") throw new Error("ไม่พบรายการหรือไม่อยู่ในสถานะรอดำเนินการ");
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.withdrawalRequest.update({
+        where: { id },
+        data: { status: "REJECTED", note, processedAt: new Date() },
+      });
+      await tx.member.update({
+        where: { id: req.memberId },
+        data: { creditBalance: { increment: Number(req.amount) } },
+      });
+      await tx.creditTransaction.create({
+        data: {
+          memberId: req.memberId,
+          type: "EARN",
+          amount: req.amount,
+          note: `คืน credit จากการปฏิเสธการถอน`,
+          refId: req.id,
+        },
+      });
+      return updated;
     });
   }
 

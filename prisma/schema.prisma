@@ -32,6 +32,18 @@ enum CommissionStatus {
   CANCELLED
 }
 
+enum CreditTransactionType {
+  EARN
+  USE
+  WITHDRAW
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Banner {
   id          String   @id @default(cuid())
   eyebrow     String
@@ -111,6 +123,7 @@ model Member {
   memberType           MemberType      @default(REGULAR)
   isActive             Boolean         @default(true)
   pointBalance         Int             @default(0)
+  creditBalance        Decimal         @default(0) @db.Decimal(10, 2)
   referralCode         String?         @unique
   referredById         String?
   referredBy           Member?         @relation("MemberReferral", fields: [referredById], references: [id])
@@ -121,9 +134,11 @@ model Member {
   store                Store?          @relation(fields: [storeId], references: [id])
   addresses            MemberAddress[]
   orders               Order[]
-  commissionsEarned    Commission[]       @relation("CommissionEarner")
-  commissionPayouts    CommissionPayout[] @relation("MemberPayouts")
-  redemptions          RewardRedemption[] @relation("MemberRedemptions")
+  commissionsEarned    Commission[]         @relation("CommissionEarner")
+  commissionPayouts    CommissionPayout[]   @relation("MemberPayouts")
+  redemptions          RewardRedemption[]   @relation("MemberRedemptions")
+  creditTransactions   CreditTransaction[]
+  withdrawalRequests   WithdrawalRequest[]
   sessions             MemberSession[]
   flowAccountContactId Int?
   createdAt            DateTime        @default(now())
@@ -369,4 +384,27 @@ model CommissionPayout {
   note        String?
   commissions Commission[]
   createdAt   DateTime     @default(now())
+}
+
+model CreditTransaction {
+  id         String                @id @default(cuid())
+  memberId   String
+  member     Member                @relation(fields: [memberId], references: [id])
+  type       CreditTransactionType
+  amount     Decimal               @db.Decimal(10, 2)
+  note       String?
+  refId      String?
+  createdAt  DateTime              @default(now())
+}
+
+model WithdrawalRequest {
+  id          String           @id @default(cuid())
+  memberId    String
+  member      Member           @relation(fields: [memberId], references: [id])
+  amount      Decimal          @db.Decimal(10, 2)
+  status      WithdrawalStatus @default(PENDING)
+  note        String?
+  processedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
