@@ -12,4 +12,10 @@ export class KBankController {
   createPayoutShopS() {
     return this.kbankService.createPayoutToShopS();
   }
+
+  @Post("payout/shop/inquiry")
+  @ApiOperation({ summary: "Exercise 7: Inquiry Payout to Shop Status" })
+  inquirePayoutShop() {
+    return this.kbankService.inquirePayoutShop();
+  }
 }

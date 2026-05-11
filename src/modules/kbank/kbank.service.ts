@@ -167,6 +167,16 @@ export class KBankService {
     return data;
   }
 
+  async inquirePayoutShop(): Promise<Record<string, unknown>> {
+    const data = await this.kbankFetch(
+      `${this.apiUrl}/v1/mpp/payout/v1/inquiry`,
+      { "Content-Type": "application/json", RequestID: "req-inqoutshop001", ProjectID: this.projectId, PartnerID: this.partnerId, ProjectKey: this.projectKey, "x-test-mode": "true", "env-id": "mpp-inquirypayout" },
+      JSON.stringify({ partnerBatchID: "BatchS001" }),
+    );
+    this.logger.debug(`[KBank] inquirePayoutShop response: ${JSON.stringify(data)}`);
+    return data;
+  }
+
   async createQRPayment(amountTHB: number): Promise<KQRPaymentResult> {
     const accessToken = await this.getAccessToken();
     const partnerOrderID = "ORDERQR0000000001";
