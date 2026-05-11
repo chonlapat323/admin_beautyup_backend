@@ -73,7 +73,7 @@ export class KBankService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        RequestID: randomUUID(),
+        RequestID: randomUUID().replace(/-/g, ""),
         ProjectID: this.projectId,
         PartnerID: this.partnerId,
         ProjectKey: this.projectKey,
