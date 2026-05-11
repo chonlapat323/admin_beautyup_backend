@@ -22,6 +22,7 @@ import { StockModule } from "./modules/stock/stock.module";
 import { ShadeGroupsModule } from "./modules/shade-groups/shade-groups.module";
 import { ShadesModule } from "./modules/shades/shades.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
+import { KBankModule } from "./modules/kbank/kbank.module";
 import { MobileModule } from "./modules/mobile/mobile.module";
 import { CommissionModule } from "./modules/commission/commission.module";
 import { SalonCodesModule } from "./modules/salon-codes/salon-codes.module";
@@ -34,6 +35,7 @@ import { RewardProductsModule } from "./modules/reward-products/reward-products.
       cache: true,
     }),
     PrismaModule,
+    KBankModule,
     MobileModule,
     CommissionModule,
     AuthModule,

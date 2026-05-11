@@ -104,6 +104,58 @@ export class KBankService {
     return { status: raw };
   }
 
+  async createPayoutToShopS(): Promise<Record<string, unknown>> {
+    const accessToken = await this.getAccessToken();
+
+    const body = {
+      partnerBatchID: "BatchS001",
+      partnerShopID: this.partnerShopId,
+      payoutLevel: "S",
+      payments: [
+        {
+          partnerPaymentID: "PAYMENT0000000001",
+          distribution: {
+            shopAmount: "50.00",
+            partners: [
+              { partnerID: "Partner0001", amount: "30.00" },
+              { partnerID: "Partner0002", amount: "20.00" },
+            ],
+          },
+        },
+        {
+          partnerPaymentID: "PAYMENT0000000002",
+          distribution: { shopAmount: "100.00" },
+        },
+      ],
+    };
+
+    this.logger.debug(`[KBank] createPayoutToShopS body: ${JSON.stringify(body)}`);
+
+    const res = await fetch(`${this.apiUrl}/v1/mpp/payout/v1/payout`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        RequestID: "req-payoutshop001",
+        ProjectID: this.projectId,
+        PartnerID: this.partnerId,
+        ProjectKey: this.projectKey,
+        "x-test-mode": "true",
+        "env-id": "mpp-payouts",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = (await res.json()) as Record<string, unknown>;
+    this.logger.debug(`[KBank] createPayoutToShopS response: ${JSON.stringify(data)}`);
+
+    if (!res.ok) {
+      const msg = ((data.error as { message?: string } | undefined)?.message) ?? "KBank payout to shop (S) failed";
+      throw new Error(msg);
+    }
+    return data;
+  }
+
   async createQRPayment(amountTHB: number): Promise<KQRPaymentResult> {
     const accessToken = await this.getAccessToken();
     const partnerOrderID = "ORDERQR0000000001";
