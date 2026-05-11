@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { Injectable, Logger } from "@nestjs/common";
 
 type TokenCache = { token: string; expiresAt: number };
@@ -19,13 +18,14 @@ function kbankId(prefix: string): string {
 export class KBankService {
   private readonly logger = new Logger(KBankService.name);
   private readonly apiUrl = process.env.KBANK_API_URL ?? "https://openapi-sandbox.kasikornbank.com";
-  private readonly consumerId = process.env.KBANK_CONSUMER_ID ?? "suDxvMLTLYsQwL1R0L9UL1m8Ceoibmcr";
-  private readonly consumerSecret = process.env.KBANK_CONSUMER_SECRET ?? "goOfPtGLoGxYP3DG";
+  private readonly consumerId = process.env.KBANK_CONSUMER_ID ?? "";
+  private readonly consumerSecret = process.env.KBANK_CONSUMER_SECRET ?? "";
   private readonly projectId = process.env.KBANK_PROJECT_ID ?? "999";
   private readonly partnerId = process.env.KBANK_PARTNER_ID ?? "0001";
   private readonly projectKey = process.env.KBANK_PROJECT_KEY ?? "d4bded59200547bc85903574a293831b";
   private readonly partnerShopId = process.env.KBANK_PARTNER_SHOP_ID ?? "shop001";
   private readonly switchBackUrl = process.env.KBANK_SWITCH_BACK_URL ?? "https://mpp-kgptest.web.app";
+  private readonly testMode = process.env.KBANK_TEST_MODE === "true";
 
   private tokenCache: TokenCache | null = null;
 
@@ -65,33 +65,34 @@ export class KBankService {
   async createKPlusPayment(amountTHB: number): Promise<KPlusPaymentResult> {
     const accessToken = await this.getAccessToken();
 
-    // TODO: เปลี่ยนเป็น generated ID หลังผ่าน UAT และได้ credentials Production จริง
-    const partnerOrderID = "ORDER000000000001";
-    const partnerPaymentID = "PAYMENT0000000001";
+    const partnerOrderID = kbankId("O");
+    const partnerPaymentID = kbankId("P");
+    const requestId = `req-${Date.now().toString(36)}`;
 
-    const headers = {
+    const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      RequestID: "req-paykplus001",
+      RequestID: requestId,
       ProjectID: this.projectId,
       PartnerID: this.partnerId,
       ProjectKey: this.projectKey,
-      "x-test-mode": "true",
-      "env-id": "mpp-paykplus",
     };
+    if (this.testMode) {
+      headers["x-test-mode"] = "true";
+      headers["env-id"] = "mpp-paykplus";
+    }
+
     const body = {
       partnerShopID: this.partnerShopId,
       partnerOrderID,
       partnerPaymentID,
-      amount: "100.00",
+      amount: amountTHB.toFixed(2),
       currencyCode: "THB",
       payoutType: "DELAY",
       switchBackURL: this.switchBackUrl,
-      sourceOfFundMerchantID: "MERCHANT001",
-      sourceOfFundShopID: "SHOP001",
     };
 
-    this.logger.debug(`[KBank] body: ${JSON.stringify(body)}`);
+    this.logger.debug(`[KBank] RequestID=${requestId} partnerOrderID=${partnerOrderID} amount=${body.amount}`);
 
     const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/appswitch/kplus`, {
       method: "POST",
