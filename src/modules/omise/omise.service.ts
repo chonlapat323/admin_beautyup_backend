@@ -11,6 +11,7 @@ type OmiseCharge = {
   failure_code?: string;
   failure_message?: string;
   expires_at?: string;
+  authorize_uri?: string;
   source?: {
     scannable_code?: {
       type: string;
@@ -109,6 +110,43 @@ export class OmiseService {
     const expiresAt = charge.expires_at ?? new Date(Date.now() + 15 * 60 * 1000).toISOString();
     this.logger.debug(`[createPromptPayCharge] chargeId=${charge.id} svgContent=${svgContent ? "yes" : "no"}`);
     return { chargeId: charge.id, svgContent, expiresAt };
+  }
+
+  async createTrueMoneyCharge(params: {
+    phoneNumber: string;
+    amountTHB: number;
+    description: string;
+    returnUri: string;
+  }): Promise<{ chargeId: string; authorizeUri: string }> {
+    const amountSatangs = Math.round(params.amountTHB * 100);
+    this.logger.debug(`[createTrueMoneyCharge] amount=${amountSatangs} phone=${params.phoneNumber}`);
+
+    const sourceRes = await fetch(`${this.apiUrl}/sources`, {
+      method: "POST",
+      headers: { Authorization: this.authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "truemoney", amount: amountSatangs, currency: "thb", phone_number: params.phoneNumber }),
+    });
+
+    const sourceData = (await sourceRes.json()) as Record<string, unknown> & { id?: string; message?: string };
+    if (!sourceRes.ok) throw new Error(sourceData.message ?? "Failed to create TrueMoney source");
+
+    const chargeRes = await fetch(`${this.apiUrl}/charges`, {
+      method: "POST",
+      headers: { Authorization: this.authHeader, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount: amountSatangs,
+        currency: "thb",
+        source: sourceData.id,
+        description: params.description,
+        return_uri: params.returnUri,
+      }),
+    });
+
+    const charge = (await chargeRes.json()) as OmiseCharge & { message?: string };
+    if (!chargeRes.ok) throw new Error(charge.message ?? "Failed to create TrueMoney charge");
+
+    this.logger.debug(`[createTrueMoneyCharge] chargeId=${charge.id} authorizeUri=${charge.authorize_uri}`);
+    return { chargeId: charge.id, authorizeUri: charge.authorize_uri ?? "" };
   }
 
   async getCharge(chargeId: string): Promise<OmiseCharge> {

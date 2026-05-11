@@ -77,6 +77,20 @@ class KBankPayDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Type(() => Number) creditAmount?: number;
 }
 
+class TrueMoneyDto {
+  @ApiProperty({ type: [CheckoutItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CheckoutItemDto)
+  items!: CheckoutItemDto[];
+
+  @ApiProperty() @IsString() shippingName!: string;
+  @ApiProperty() @IsString() shippingPhone!: string;
+  @ApiProperty() @IsString() shippingAddr!: string;
+  @ApiProperty() @IsString() phoneNumber!: string;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Type(() => Number) creditAmount?: number;
+}
+
 class BankAccountDto {
   @ApiProperty() @IsString() bankName!: string;
   @ApiProperty() @IsString() bankAccountNumber!: string;
@@ -212,6 +226,13 @@ export class MobileController {
   async initiateKBankQRPay(@Headers("authorization") auth: string, @Body() dto: KBankPayDto) {
     const member = await this.extractMember(auth);
     return this.mobileService.initiateKBankQRPayment(member.id, dto);
+  }
+
+  @Post("truemoney")
+  @ApiOperation({ summary: "Initiate TrueMoney Wallet payment" })
+  async initiateTrueMoney(@Headers("authorization") auth: string, @Body() dto: TrueMoneyDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.initiateTrueMoney(member.id, dto);
   }
 
   @Get("addresses")
