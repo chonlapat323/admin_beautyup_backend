@@ -229,6 +229,16 @@ export class KBankService {
     return data;
   }
 
+  async inquirePayoutMerchant(): Promise<Record<string, unknown>> {
+    const data = await this.kbankFetch(
+      `${this.apiUrl}/v1/mpp/payout/v1/inquiry-payout-merchant`,
+      { "Content-Type": "application/json", RequestID: "req-inqoutmer001", ProjectID: this.projectId, PartnerID: this.partnerId, ProjectKey: this.projectKey, "x-test-mode": "true", "env-id": "mpp-inquirypayoutmerchant" },
+      JSON.stringify({ partnerPayoutMerchantID: "MerchantBatch001" }),
+    );
+    this.logger.debug(`[KBank] inquirePayoutMerchant response: ${JSON.stringify(data)}`);
+    return data;
+  }
+
   async inquirePayoutShop(): Promise<Record<string, unknown>> {
     const data = await this.kbankFetch(
       `${this.apiUrl}/v1/mpp/payout/v1/inquiry`,

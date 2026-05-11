@@ -30,4 +30,10 @@ export class KBankController {
   createPayoutMerchant() {
     return this.kbankService.createPayoutToMerchant();
   }
+
+  @Post("payout/merchant/inquiry")
+  @ApiOperation({ summary: "Exercise 10: Inquiry Payout to Merchant Status" })
+  inquirePayoutMerchant() {
+    return this.kbankService.inquirePayoutMerchant();
+  }
 }
