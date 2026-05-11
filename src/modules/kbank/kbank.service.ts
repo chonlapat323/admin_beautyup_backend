@@ -72,7 +72,7 @@ export class KBankService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        RequestID: partnerPaymentID,
+        RequestID: `req-${Date.now().toString().slice(-10)}`,
         ProjectID: this.projectId,
         PartnerID: this.partnerId,
         ProjectKey: this.projectKey,
