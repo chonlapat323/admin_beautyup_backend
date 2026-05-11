@@ -93,8 +93,8 @@ export class KBankService {
   async createKPlusPayment(amountTHB: number): Promise<KPlusPaymentResult> {
     const accessToken = await this.getAccessToken();
 
-    const partnerOrderID = "ORDER000000000001";
-    const partnerPaymentID = "PAYMENT0000000001";
+    const partnerOrderID = kbankId("ORDER");
+    const partnerPaymentID = kbankId("PAYMENT");
 
     const headers = {
       Authorization: `Bearer ${accessToken}`,
