@@ -64,6 +64,19 @@ class PromptPayDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Type(() => Number) creditAmount?: number;
 }
 
+class KBankPayDto {
+  @ApiProperty({ type: [CheckoutItemDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CheckoutItemDto)
+  items!: CheckoutItemDto[];
+
+  @ApiProperty() @IsString() shippingName!: string;
+  @ApiProperty() @IsString() shippingPhone!: string;
+  @ApiProperty() @IsString() shippingAddr!: string;
+  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) @Type(() => Number) creditAmount?: number;
+}
+
 class BankAccountDto {
   @ApiProperty() @IsString() bankName!: string;
   @ApiProperty() @IsString() bankAccountNumber!: string;
@@ -171,6 +184,13 @@ export class MobileController {
   async checkPromptPay(@Headers("authorization") auth: string, @Param("chargeId") chargeId: string) {
     const member = await this.extractMember(auth);
     return this.mobileService.checkPromptPay(chargeId, member.id);
+  }
+
+  @Post("kbank-pay")
+  @ApiOperation({ summary: "Initiate KBank K+ AppSwitch payment" })
+  async initiateKBankPay(@Headers("authorization") auth: string, @Body() dto: KBankPayDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.initiateKBankPayment(member.id, dto);
   }
 
   @Get("addresses")
