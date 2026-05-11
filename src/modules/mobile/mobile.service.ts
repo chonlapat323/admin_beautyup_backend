@@ -589,22 +589,25 @@ export class MobileService {
 
     const result = await this.kbankService.createKPlusPayment(chargeAmount > 0 ? chargeAmount : 1);
 
-    await this.prisma.pendingCheckout.create({
-      data: {
+    const checkoutData = {
+      items: orderItems,
+      subtotal,
+      gatewayFee,
+      totalAmount,
+      creditAmount,
+      shippingName: payload.shippingName,
+      shippingPhone: payload.shippingPhone,
+      shippingAddr: payload.shippingAddr,
+      partnerOrderID: result.partnerOrderID,
+      paymentMethod: "KBANK_KPLUS",
+    };
+    await this.prisma.pendingCheckout.upsert({
+      where: { chargeId: result.partnerPaymentID },
+      update: { memberId, checkoutData, expiresAt: new Date(Date.now() + 29 * 60 * 1000) },
+      create: {
         chargeId: result.partnerPaymentID,
         memberId,
-        checkoutData: {
-          items: orderItems,
-          subtotal,
-          gatewayFee,
-          totalAmount,
-          creditAmount,
-          shippingName: payload.shippingName,
-          shippingPhone: payload.shippingPhone,
-          shippingAddr: payload.shippingAddr,
-          partnerOrderID: result.partnerOrderID,
-          paymentMethod: "KBANK_KPLUS",
-        },
+        checkoutData,
         expiresAt: new Date(Date.now() + 29 * 60 * 1000),
       },
     });
