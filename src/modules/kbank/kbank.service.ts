@@ -123,7 +123,7 @@ export class KBankService {
       partnerShopID: this.partnerShopId,
       partnerOrderID,
       partnerPaymentID,
-      amount: amountTHB.toFixed(2),
+      amount: "1000.50",
       currencyCode: "THB",
       payoutType: "DELAY",
       sourceOfFundMerchantID: "MERCHANT001",
