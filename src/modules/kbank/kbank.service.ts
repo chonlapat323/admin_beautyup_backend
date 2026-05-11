@@ -67,9 +67,7 @@ export class KBankService {
 
     const partnerOrderID = kbankId("O");
     const partnerPaymentID = kbankId("P");
-    const requestId =
-      new Date().toISOString().replace(/\D/g, "").slice(0, 14) +
-      Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+    const requestId = `${Date.now()}${Math.floor(Math.random() * 90 + 10)}`;
 
     const headers = {
       Authorization: `Bearer ${accessToken}`,
