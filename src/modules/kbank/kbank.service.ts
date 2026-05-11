@@ -25,7 +25,6 @@ export class KBankService {
   private readonly projectKey = process.env.KBANK_PROJECT_KEY ?? "d4bded59200547bc85903574a293831b";
   private readonly partnerShopId = process.env.KBANK_PARTNER_SHOP_ID ?? "shop001";
   private readonly switchBackUrl = process.env.KBANK_SWITCH_BACK_URL ?? "https://mpp-kgptest.web.app";
-  private readonly testMode = process.env.KBANK_TEST_MODE === "true";
 
   private tokenCache: TokenCache | null = null;
 
@@ -65,34 +64,30 @@ export class KBankService {
   async createKPlusPayment(amountTHB: number): Promise<KPlusPaymentResult> {
     const accessToken = await this.getAccessToken();
 
-    const partnerOrderID = this.testMode ? "ORDER000000000001" : kbankId("O");
-    const partnerPaymentID = this.testMode ? "PAYMENT0000000001" : kbankId("P");
-    const requestId = this.testMode ? "req-paykplus001" : `req-${Date.now().toString(36)}`;
+    const partnerOrderID = "ORDER000000000001";
+    const partnerPaymentID = "PAYMENT0000000001";
 
-    const headers: Record<string, string> = {
+    const headers = {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      RequestID: requestId,
+      RequestID: "req-paykplus001",
       ProjectID: this.projectId,
       PartnerID: this.partnerId,
       ProjectKey: this.projectKey,
+      "x-test-mode": "true",
+      "env-id": "mpp-paykplus",
     };
-    if (this.testMode) {
-      headers["x-test-mode"] = "true";
-      headers["env-id"] = "mpp-paykplus";
-    }
-
     const body = {
       partnerShopID: this.partnerShopId,
       partnerOrderID,
       partnerPaymentID,
-      amount: this.testMode ? "100.00" : amountTHB.toFixed(2),
+      amount: "100.00",
       currencyCode: "THB",
       payoutType: "DELAY",
       switchBackURL: this.switchBackUrl,
     };
 
-    this.logger.debug(`[KBank] testMode=${this.testMode} RequestID=${requestId} partnerOrderID=${partnerOrderID} amount=${body.amount}`);
+    this.logger.debug(`[KBank] body: ${JSON.stringify(body)}`);
 
     const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/appswitch/kplus`, {
       method: "POST",
