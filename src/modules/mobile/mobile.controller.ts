@@ -194,10 +194,17 @@ export class MobileController {
   }
 
   @Get("kbank-pay/:partnerPaymentID")
-  @ApiOperation({ summary: "Check KBank K+ payment status" })
+  @ApiOperation({ summary: "Check KBank payment status (K+ and Card)" })
   async checkKBankPay(@Headers("authorization") auth: string, @Param("partnerPaymentID") partnerPaymentID: string) {
     const member = await this.extractMember(auth);
     return this.mobileService.checkKBankPayment(partnerPaymentID, member.id);
+  }
+
+  @Post("kbank-card")
+  @ApiOperation({ summary: "Initiate KBank Credit/Debit card payment" })
+  async initiateKBankCardPay(@Headers("authorization") auth: string, @Body() dto: KBankPayDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.initiateKBankCardPayment(member.id, dto);
   }
 
   @Get("addresses")

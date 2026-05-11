@@ -8,6 +8,12 @@ export type KPlusPaymentResult = {
   partnerPaymentID: string;
 };
 
+export type KCardPaymentResult = {
+  redirectURL: string;
+  partnerOrderID: string;
+  partnerPaymentID: string;
+};
+
 function kbankId(prefix: string): string {
   const ts = Date.now().toString();
   const rand = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
@@ -88,6 +94,59 @@ export class KBankService {
 
     const raw = ((data.paymentStatus ?? data.status ?? "PENDING") as string).toUpperCase();
     return { status: raw };
+  }
+
+  async createCardPayment(amountTHB: number): Promise<KCardPaymentResult> {
+    const accessToken = await this.getAccessToken();
+    const partnerOrderID = kbankId("ORDER");
+    const partnerPaymentID = kbankId("PAYMENT");
+
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      RequestID: "req-paycard001",
+      ProjectID: this.projectId,
+      PartnerID: this.partnerId,
+      ProjectKey: this.projectKey,
+      "x-test-mode": "true",
+      "env-id": "mpp-paycard",
+    };
+    const body = {
+      partnerShopID: this.partnerShopId,
+      partnerOrderID,
+      partnerPaymentID,
+      amount: amountTHB.toFixed(2),
+      currencyCode: "THB",
+      payoutType: "DELAY",
+      mode: "TOKEN",
+      token: "tokn_prod_12345678",
+      saveCard: { name: "test", email: "test@test.com", saveFlag: true },
+      threeDSFlag: true,
+      switchBackURL: this.switchBackUrl,
+      sourceOfFundMerchantID: "MERCHANT001",
+      sourceOfFundShopID: "SHOP001",
+    };
+
+    this.logger.debug(`[KBank] createCardPayment body: ${JSON.stringify(body)}`);
+
+    const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/card/charge`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    const data = (await res.json()) as Record<string, unknown> & { message?: string };
+    this.logger.debug(`[KBank] createCardPayment response: ${JSON.stringify(data)}`);
+
+    if (!res.ok) {
+      throw new Error((data.message as string | undefined) ?? "KBank card payment creation failed");
+    }
+
+    return {
+      redirectURL: (data.redirectURL as string | undefined) ?? (data.webPaymentURL as string | undefined) ?? "",
+      partnerOrderID,
+      partnerPaymentID,
+    };
   }
 
   async createKPlusPayment(amountTHB: number): Promise<KPlusPaymentResult> {

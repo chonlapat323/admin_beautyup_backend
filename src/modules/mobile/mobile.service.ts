@@ -615,6 +615,64 @@ export class MobileService {
     return { deepLink: result.deepLink, partnerPaymentID: result.partnerPaymentID };
   }
 
+  async initiateKBankCardPayment(memberId: string, payload: {
+    items: { productId: string; quantity: number }[];
+    shippingName: string;
+    shippingPhone: string;
+    shippingAddr: string;
+    creditAmount?: number;
+  }): Promise<{ redirectURL: string; partnerPaymentID: string }> {
+    const productIds = payload.items.map((i) => i.productId);
+    const products = await this.prisma.product.findMany({ where: { id: { in: productIds }, status: "ACTIVE" } });
+
+    if (products.length !== payload.items.length) throw new BadRequestException("พบสินค้าที่ไม่พร้อมขาย");
+
+    for (const item of payload.items) {
+      const product = products.find((p) => p.id === item.productId)!;
+      if (product.sellableStock < item.quantity) throw new BadRequestException(`สินค้า "${product.name}" มีจำนวนไม่เพียงพอ`);
+    }
+
+    const orderItems = payload.items.map((item) => {
+      const product = products.find((p) => p.id === item.productId)!;
+      const unitPrice = Number(product.specialPrice ?? product.price);
+      return { productId: product.id, sku: product.sku, name: product.name, quantity: item.quantity, unitPrice, totalPrice: unitPrice * item.quantity };
+    });
+
+    const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
+    const gatewayFee = await this.settingsService.getValue("gateway_fee");
+    const totalAmount = subtotal + gatewayFee;
+    const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
+    const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
+
+    if (creditAmount > 0) {
+      const memberData = await this.prisma.member.findUnique({ where: { id: memberId }, select: { creditBalance: true } });
+      if (Number(memberData?.creditBalance ?? 0) < creditAmount) throw new BadRequestException("ยอด Credit ไม่เพียงพอ");
+    }
+
+    const result = await this.kbankService.createCardPayment(chargeAmount > 0 ? chargeAmount : 1);
+
+    const checkoutData = {
+      items: orderItems,
+      subtotal,
+      gatewayFee,
+      totalAmount,
+      creditAmount,
+      shippingName: payload.shippingName,
+      shippingPhone: payload.shippingPhone,
+      shippingAddr: payload.shippingAddr,
+      partnerOrderID: result.partnerOrderID,
+      paymentMethod: "KBANK_CARD",
+    };
+
+    await this.prisma.pendingCheckout.upsert({
+      where: { chargeId: result.partnerPaymentID },
+      update: { memberId, checkoutData, expiresAt: new Date(Date.now() + 29 * 60 * 1000) },
+      create: { chargeId: result.partnerPaymentID, memberId, checkoutData, expiresAt: new Date(Date.now() + 29 * 60 * 1000) },
+    });
+
+    return { redirectURL: result.redirectURL, partnerPaymentID: result.partnerPaymentID };
+  }
+
   async checkKBankPayment(partnerPaymentID: string, memberId: string): Promise<{ status: string; order?: object }> {
     const pending = await this.prisma.pendingCheckout.findUnique({ where: { chargeId: partnerPaymentID } });
     if (!pending || pending.memberId !== memberId) {
@@ -641,6 +699,7 @@ export class MobileService {
         shippingName: string;
         shippingPhone: string;
         shippingAddr: string;
+        paymentMethod?: string;
       };
       const data = pending.checkoutData as CheckoutData;
       const creditAmount = data.creditAmount ?? 0;
@@ -663,7 +722,7 @@ export class MobileService {
             shippingPhone: data.shippingPhone,
             shippingAddr: data.shippingAddr,
             chargeId: partnerPaymentID,
-            paymentMethod: "KBANK_KPLUS",
+            paymentMethod: data.paymentMethod ?? "KBANK_KPLUS",
             items: { create: data.items },
           },
           include: { items: true },
