@@ -44,8 +44,12 @@ export class KBankService {
     return Buffer.from(`${this.consumerId}:${this.consumerSecret}`).toString("base64");
   }
 
-  async getAccessToken(): Promise<string> {
-    if (this.tokenCache && Date.now() < this.tokenCache.expiresAt - 60_000) {
+  private invalidateToken() {
+    this.tokenCache = null;
+  }
+
+  async getAccessToken(forceRefresh = false): Promise<string> {
+    if (!forceRefresh && this.tokenCache && Date.now() < this.tokenCache.expiresAt - 60_000) {
       return this.tokenCache.token;
     }
 
@@ -71,6 +75,24 @@ export class KBankService {
     };
     this.logger.debug("[KBank] Access token refreshed");
     return this.tokenCache.token;
+  }
+
+  private async kbankFetch(url: string, headers: Record<string, string>, body: string): Promise<Record<string, unknown>> {
+    const makeHeaders = (token: string) => ({ ...headers, Authorization: `Bearer ${token}` });
+
+    let token = await this.getAccessToken();
+    let res = await fetch(url, { method: "POST", headers: makeHeaders(token), body });
+    let data = (await res.json()) as Record<string, unknown>;
+
+    if ((data.code === "openapi_error" && (data.message as string)?.includes("Invalid Access Token")) || res.status === 401) {
+      this.logger.warn("[KBank] Token invalid — refreshing and retrying");
+      this.invalidateToken();
+      token = await this.getAccessToken(true);
+      res = await fetch(url, { method: "POST", headers: makeHeaders(token), body });
+      data = (await res.json()) as Record<string, unknown>;
+    }
+
+    return data;
   }
 
   async inquirePayment(partnerPaymentID: string): Promise<{ status: string }> {
@@ -131,26 +153,15 @@ export class KBankService {
 
     this.logger.debug(`[KBank] createPayoutToShopS body: ${JSON.stringify(body)}`);
 
-    const res = await fetch(`${this.apiUrl}/v1/mpp/payout/v1/payout`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        RequestID: "req-payoutshop001",
-        ProjectID: this.projectId,
-        PartnerID: this.partnerId,
-        ProjectKey: this.projectKey,
-        "x-test-mode": "true",
-        "env-id": "mpp-payouts",
-      },
-      body: JSON.stringify(body),
-    });
-
-    const data = (await res.json()) as Record<string, unknown>;
+    const data = await this.kbankFetch(
+      `${this.apiUrl}/v1/mpp/payout/v1/payout`,
+      { "Content-Type": "application/json", RequestID: "req-payoutshop001", ProjectID: this.projectId, PartnerID: this.partnerId, ProjectKey: this.projectKey, "x-test-mode": "true", "env-id": "mpp-payouts" },
+      JSON.stringify(body),
+    );
     this.logger.debug(`[KBank] createPayoutToShopS response: ${JSON.stringify(data)}`);
 
-    if (!res.ok) {
-      const msg = ((data.error as { message?: string } | undefined)?.message) ?? "KBank payout to shop (S) failed";
+    if (data.code === "openapi_error" || (data.error as { name?: string } | undefined)?.name === "BAD_REQUEST") {
+      const msg = ((data.error as { message?: string } | undefined)?.message) ?? (data.message as string | undefined) ?? "KBank payout to shop (S) failed";
       throw new Error(msg);
     }
     return data;
