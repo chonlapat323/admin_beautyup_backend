@@ -744,7 +744,7 @@ export class MobileService {
     }
 
     const inquiry = await this.kbankService.inquirePayment(partnerPaymentID);
-    const isSuccess = ["SUCCESS", "SUCCESSFUL"].includes(inquiry.status);
+    const isSuccess = ["SUCCESS", "SUCCESSFUL", "PAID"].includes(inquiry.status);
     const isFailed = ["FAILED", "EXPIRED", "CANCELLED"].includes(inquiry.status);
 
     if (isSuccess) {
