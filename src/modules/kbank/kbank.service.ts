@@ -65,9 +65,9 @@ export class KBankService {
   async createKPlusPayment(amountTHB: number): Promise<KPlusPaymentResult> {
     const accessToken = await this.getAccessToken();
 
-    const partnerOrderID = kbankId("O");
-    const partnerPaymentID = kbankId("P");
-    const requestId = `req-${Date.now().toString(36)}`;
+    const partnerOrderID = this.testMode ? "ORDER000000000001" : kbankId("O");
+    const partnerPaymentID = this.testMode ? "PAYMENT0000000001" : kbankId("P");
+    const requestId = this.testMode ? "req-paykplus001" : `req-${Date.now().toString(36)}`;
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
@@ -86,13 +86,13 @@ export class KBankService {
       partnerShopID: this.partnerShopId,
       partnerOrderID,
       partnerPaymentID,
-      amount: amountTHB.toFixed(2),
+      amount: this.testMode ? "100.00" : amountTHB.toFixed(2),
       currencyCode: "THB",
       payoutType: "DELAY",
       switchBackURL: this.switchBackUrl,
     };
 
-    this.logger.debug(`[KBank] RequestID=${requestId} partnerOrderID=${partnerOrderID} amount=${body.amount}`);
+    this.logger.debug(`[KBank] testMode=${this.testMode} RequestID=${requestId} partnerOrderID=${partnerOrderID} amount=${body.amount}`);
 
     const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/appswitch/kplus`, {
       method: "POST",
