@@ -106,8 +106,8 @@ export class KBankService {
 
   async createQRPayment(amountTHB: number): Promise<KQRPaymentResult> {
     const accessToken = await this.getAccessToken();
-    const partnerOrderID = kbankId("ORDERQR");
-    const partnerPaymentID = kbankId("PAYMENTQR");
+    const partnerOrderID = "ORDERQR0000000001";
+    const partnerPaymentID = "PAYMENTQR00000001";
 
     const headers = {
       Authorization: `Bearer ${accessToken}`,
