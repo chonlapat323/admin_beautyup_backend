@@ -206,6 +206,29 @@ export class KBankService {
     return data;
   }
 
+  async createPayoutToMerchant(): Promise<Record<string, unknown>> {
+    const body = {
+      partnerPayoutMerchantID: "MerchantBatch001",
+      partnerMerchantID: "merchant001",
+      payouts: ["BatchM001"],
+    };
+
+    this.logger.debug(`[KBank] createPayoutToMerchant body: ${JSON.stringify(body)}`);
+
+    const data = await this.kbankFetch(
+      `${this.apiUrl}/v1/mpp/payout/v1/payout-merchant`,
+      { "Content-Type": "application/json", RequestID: "req-payoutmerc001", ProjectID: this.projectId, PartnerID: this.partnerId, ProjectKey: this.projectKey, "x-test-mode": "true", "env-id": "mpp-payoutmerchant" },
+      JSON.stringify(body),
+    );
+    this.logger.debug(`[KBank] createPayoutToMerchant response: ${JSON.stringify(data)}`);
+
+    if (data.code === "openapi_error" || (data.error as { name?: string } | undefined)?.name === "BAD_REQUEST") {
+      const msg = ((data.error as { message?: string } | undefined)?.message) ?? (data.message as string | undefined) ?? "KBank payout to merchant failed";
+      throw new Error(msg);
+    }
+    return data;
+  }
+
   async inquirePayoutShop(): Promise<Record<string, unknown>> {
     const data = await this.kbankFetch(
       `${this.apiUrl}/v1/mpp/payout/v1/inquiry`,

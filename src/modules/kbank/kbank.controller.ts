@@ -24,4 +24,10 @@ export class KBankController {
   createPayoutShopM() {
     return this.kbankService.createPayoutToShopM();
   }
+
+  @Post("payout/merchant")
+  @ApiOperation({ summary: "Exercise 9: Create Payout to Merchant" })
+  createPayoutMerchant() {
+    return this.kbankService.createPayoutToMerchant();
+  }
 }
