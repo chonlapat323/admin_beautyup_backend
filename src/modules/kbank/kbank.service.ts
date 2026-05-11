@@ -67,28 +67,38 @@ export class KBankService {
 
     const partnerOrderID = kbankId("O");
     const partnerPaymentID = kbankId("P");
+    const requestId =
+      new Date().toISOString().replace(/\D/g, "").slice(0, 14) +
+      Math.floor(Math.random() * 1000000).toString().padStart(6, "0");
+
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      RequestID: requestId,
+      ProjectID: this.projectId,
+      PartnerID: this.partnerId,
+      ProjectKey: this.projectKey,
+      "x-test-mode": "true",
+      "env-id": "mpp-paykplus",
+    };
+    const body = {
+      partnerShopID: this.partnerShopId,
+      partnerOrderID,
+      partnerPaymentID,
+      amount: amountTHB.toFixed(2),
+      currencyCode: "THB",
+      payoutType: "DELAY",
+      switchBackURL: this.switchBackUrl,
+    };
+
+    this.logger.debug(`[KBank] RequestID: ${requestId} (length: ${requestId.length})`);
+    this.logger.debug(`[KBank] headers: ${JSON.stringify({ ...headers, Authorization: "Bearer ***", ProjectKey: "***" })}`);
+    this.logger.debug(`[KBank] body: ${JSON.stringify(body)}`);
 
     const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/appswitch/kplus`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-        RequestID: randomUUID().replace(/-/g, ""),
-        ProjectID: this.projectId,
-        PartnerID: this.partnerId,
-        ProjectKey: this.projectKey,
-        "x-test-mode": "true",
-        "env-id": "mpp-paykplus",
-      },
-      body: JSON.stringify({
-        partnerShopID: this.partnerShopId,
-        partnerOrderID,
-        partnerPaymentID,
-        amount: amountTHB.toFixed(2),
-        currencyCode: "THB",
-        payoutType: "DELAY",
-        switchBackURL: this.switchBackUrl,
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
 
     const data = (await res.json()) as Record<string, unknown> & { message?: string };
