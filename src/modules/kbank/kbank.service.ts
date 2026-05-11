@@ -167,6 +167,45 @@ export class KBankService {
     return data;
   }
 
+  async createPayoutToShopM(): Promise<Record<string, unknown>> {
+    const body = {
+      partnerBatchID: "BatchM001",
+      partnerShopID: this.partnerShopId,
+      payoutLevel: "M",
+      payments: [
+        {
+          partnerPaymentID: "PAYMENT0000000001",
+          distribution: {
+            shopAmount: "50.00",
+            partners: [
+              { partnerID: "Partner0001", amount: "30.00" },
+              { partnerID: "Partner0002", amount: "20.00" },
+            ],
+          },
+        },
+        {
+          partnerPaymentID: "PAYMENT0000000002",
+          distribution: { shopAmount: "100.00" },
+        },
+      ],
+    };
+
+    this.logger.debug(`[KBank] createPayoutToShopM body: ${JSON.stringify(body)}`);
+
+    const data = await this.kbankFetch(
+      `${this.apiUrl}/v1/mpp/payout/v1/payout`,
+      { "Content-Type": "application/json", RequestID: "req-payoutshop002", ProjectID: this.projectId, PartnerID: this.partnerId, ProjectKey: this.projectKey, "x-test-mode": "true", "env-id": "mpp-payoutm" },
+      JSON.stringify(body),
+    );
+    this.logger.debug(`[KBank] createPayoutToShopM response: ${JSON.stringify(data)}`);
+
+    if (data.code === "openapi_error" || (data.error as { name?: string } | undefined)?.name === "BAD_REQUEST") {
+      const msg = ((data.error as { message?: string } | undefined)?.message) ?? (data.message as string | undefined) ?? "KBank payout to shop (M) failed";
+      throw new Error(msg);
+    }
+    return data;
+  }
+
   async inquirePayoutShop(): Promise<Record<string, unknown>> {
     const data = await this.kbankFetch(
       `${this.apiUrl}/v1/mpp/payout/v1/inquiry`,

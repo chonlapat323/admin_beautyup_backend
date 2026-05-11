@@ -18,4 +18,10 @@ export class KBankController {
   inquirePayoutShop() {
     return this.kbankService.inquirePayoutShop();
   }
+
+  @Post("payout/shop-m")
+  @ApiOperation({ summary: "Exercise 8: Create Payout to Shop (level M)" })
+  createPayoutShopM() {
+    return this.kbankService.createPayoutToShopM();
+  }
 }
