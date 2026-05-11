@@ -207,6 +207,13 @@ export class MobileController {
     return this.mobileService.initiateKBankCardPayment(member.id, dto);
   }
 
+  @Post("kbank-qr")
+  @ApiOperation({ summary: "Initiate KBank BOT QR payment" })
+  async initiateKBankQRPay(@Headers("authorization") auth: string, @Body() dto: KBankPayDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.initiateKBankQRPayment(member.id, dto);
+  }
+
   @Get("addresses")
   @ApiOperation({ summary: "List my addresses" })
   async getAddresses(@Headers("authorization") auth: string) {

@@ -14,6 +14,12 @@ export type KCardPaymentResult = {
   partnerPaymentID: string;
 };
 
+export type KQRPaymentResult = {
+  qrImage: string;
+  partnerOrderID: string;
+  partnerPaymentID: string;
+};
+
 function kbankId(prefix: string): string {
   const ts = Date.now().toString();
   const rand = Math.floor(Math.random() * 1000).toString().padStart(3, "0");
@@ -96,6 +102,51 @@ export class KBankService {
 
     const raw = ((data.paymentStatus ?? data.status ?? "PENDING") as string).toUpperCase();
     return { status: raw };
+  }
+
+  async createQRPayment(amountTHB: number): Promise<KQRPaymentResult> {
+    const accessToken = await this.getAccessToken();
+    const partnerOrderID = kbankId("ORDERQR");
+    const partnerPaymentID = kbankId("PAYMENTQR");
+
+    const headers = {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+      RequestID: "req-payqr001",
+      ProjectID: this.projectId,
+      PartnerID: this.partnerId,
+      ProjectKey: this.projectKey,
+      "x-test-mode": "true",
+      "env-id": "mpp-payqr",
+    };
+    const body = {
+      partnerShopID: this.partnerShopId,
+      partnerOrderID,
+      partnerPaymentID,
+      amount: amountTHB.toFixed(2),
+      currencyCode: "THB",
+      payoutType: "DELAY",
+      sourceOfFundMerchantID: "MERCHANT001",
+      sourceOfFundShopID: "SHOP001",
+    };
+
+    this.logger.debug(`[KBank] createQRPayment body: ${JSON.stringify(body)}`);
+
+    const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/qr`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
+
+    const data = (await res.json()) as Record<string, unknown> & { message?: string };
+    this.logger.debug(`[KBank] createQRPayment response: ${JSON.stringify(data)}`);
+
+    if (!res.ok) {
+      throw new Error((data.message as string | undefined) ?? "KBank QR payment creation failed");
+    }
+
+    const qrImage = ((data.qrImage ?? data.qrCode ?? data.qrCodeImage ?? "") as string);
+    return { qrImage, partnerOrderID, partnerPaymentID };
   }
 
   async createCardPayment(amountTHB: number): Promise<KCardPaymentResult> {
