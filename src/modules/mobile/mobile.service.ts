@@ -615,6 +615,97 @@ export class MobileService {
     return { deepLink: result.deepLink, partnerPaymentID: result.partnerPaymentID };
   }
 
+  async checkKBankPayment(partnerPaymentID: string, memberId: string): Promise<{ status: string; order?: object }> {
+    const pending = await this.prisma.pendingCheckout.findUnique({ where: { chargeId: partnerPaymentID } });
+    if (!pending || pending.memberId !== memberId) {
+      throw new BadRequestException("ไม่พบรายการชำระเงิน");
+    }
+
+    const existingOrder = await this.prisma.order.findFirst({ where: { chargeId: partnerPaymentID } });
+    if (existingOrder) {
+      await this.prisma.pendingCheckout.deleteMany({ where: { chargeId: partnerPaymentID } });
+      return { status: "successful", order: existingOrder };
+    }
+
+    const inquiry = await this.kbankService.inquirePayment(partnerPaymentID);
+    const isSuccess = ["SUCCESS", "SUCCESSFUL"].includes(inquiry.status);
+    const isFailed = ["FAILED", "EXPIRED", "CANCELLED"].includes(inquiry.status);
+
+    if (isSuccess) {
+      type CheckoutData = {
+        items: { productId: string; sku: string; name: string; quantity: number; unitPrice: number; totalPrice: number }[];
+        subtotal: number;
+        gatewayFee: number;
+        totalAmount: number;
+        creditAmount?: number;
+        shippingName: string;
+        shippingPhone: string;
+        shippingAddr: string;
+      };
+      const data = pending.checkoutData as CheckoutData;
+      const creditAmount = data.creditAmount ?? 0;
+
+      const pointTiers = await this.settingsService.getPointTiers();
+      const pointEarned = SettingsService.calculatePoints(data.subtotal, pointTiers);
+
+      const [order] = await this.prisma.$transaction([
+        this.prisma.order.create({
+          data: {
+            orderNumber: generateOrderNumber(),
+            memberId,
+            status: "PAID",
+            subtotalAmount: data.subtotal,
+            shippingAmount: 0,
+            gatewayFee: data.gatewayFee,
+            totalAmount: data.totalAmount,
+            pointEarned,
+            shippingName: data.shippingName,
+            shippingPhone: data.shippingPhone,
+            shippingAddr: data.shippingAddr,
+            chargeId: partnerPaymentID,
+            paymentMethod: "KBANK_KPLUS",
+            items: { create: data.items },
+          },
+          include: { items: true },
+        }),
+        ...data.items.map((item) =>
+          this.prisma.product.update({
+            where: { id: item.productId },
+            data: { sellableStock: { decrement: item.quantity } },
+          }),
+        ),
+        ...(pointEarned > 0
+          ? [this.prisma.member.update({ where: { id: memberId }, data: { pointBalance: { increment: pointEarned } } })]
+          : []),
+        ...(creditAmount > 0
+          ? [this.prisma.member.update({ where: { id: memberId }, data: { creditBalance: { decrement: creditAmount } } })]
+          : []),
+      ]);
+
+      if (creditAmount > 0) {
+        this.prisma.creditTransaction.create({
+          data: { memberId, type: "USE", amount: creditAmount, note: `ใช้ credit ชำระออเดอร์ ${order.orderNumber}`, refId: order.id },
+        }).catch((err) => this.logger.error(`[Credit] USE log FAILED: ${String(err)}`));
+      }
+
+      await this.prisma.pendingCheckout.delete({ where: { chargeId: partnerPaymentID } });
+      this.commissionService.createForOrder(order.id).catch((err) =>
+        this.logger.error(`[Commission] FAILED for order ${order.id}: ${String(err)}`),
+      );
+      this.syncOrderToFlowAccount(order, memberId).catch((err) =>
+        this.logger.error(`[FlowAccount kbank sync] FAILED: ${String(err)}`),
+      );
+
+      return { status: "successful", order };
+    }
+
+    if (isFailed) {
+      await this.prisma.pendingCheckout.deleteMany({ where: { chargeId: partnerPaymentID } });
+    }
+
+    return { status: inquiry.status.toLowerCase() };
+  }
+
   async checkPromptPay(chargeId: string, memberId: string): Promise<{ status: string; order?: object }> {
     const pending = await this.prisma.pendingCheckout.findUnique({ where: { chargeId } });
     if (!pending || pending.memberId !== memberId) {

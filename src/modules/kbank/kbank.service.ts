@@ -61,6 +61,35 @@ export class KBankService {
     return this.tokenCache.token;
   }
 
+  async inquirePayment(partnerPaymentID: string): Promise<{ status: string }> {
+    const accessToken = await this.getAccessToken();
+
+    const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/inquiry`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        RequestID: "req-inqpayment001",
+        ProjectID: this.projectId,
+        PartnerID: this.partnerId,
+        ProjectKey: this.projectKey,
+        "x-test-mode": "true",
+        "env-id": "mpp-inquirypayment",
+      },
+      body: JSON.stringify({ partnerPaymentID }),
+    });
+
+    const data = (await res.json()) as Record<string, unknown>;
+    this.logger.debug(`[KBank] inquirePayment response: ${JSON.stringify(data)}`);
+
+    if (!res.ok) {
+      throw new Error((data.message as string | undefined) ?? "KBank inquiry failed");
+    }
+
+    const raw = ((data.paymentStatus ?? data.status ?? "PENDING") as string).toUpperCase();
+    return { status: raw };
+  }
+
   async createKPlusPayment(amountTHB: number): Promise<KPlusPaymentResult> {
     const accessToken = await this.getAccessToken();
 
