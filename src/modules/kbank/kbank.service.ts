@@ -107,7 +107,7 @@ export class KBankService {
     }
 
     return {
-      deepLink: (data.deepLink as string | undefined) ?? (data.redirectUrl as string | undefined) ?? "",
+      deepLink: (data.deepLink as string | undefined) ?? (data.redirectURL as string | undefined) ?? "",
       partnerOrderID,
       partnerPaymentID,
     };
