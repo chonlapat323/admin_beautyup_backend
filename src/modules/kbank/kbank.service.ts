@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { Injectable, Logger } from "@nestjs/common";
 
 type TokenCache = { token: string; expiresAt: number };
@@ -72,7 +73,7 @@ export class KBankService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
-        RequestID: `req-${Date.now().toString().slice(-10)}`,
+        RequestID: randomUUID(),
         ProjectID: this.projectId,
         PartnerID: this.partnerId,
         ProjectKey: this.projectKey,
