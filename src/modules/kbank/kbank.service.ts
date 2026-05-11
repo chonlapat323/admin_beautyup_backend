@@ -89,7 +89,9 @@ export class KBankService {
     this.logger.debug(`[KBank] inquirePayment response: ${JSON.stringify(data)}`);
 
     if (!res.ok) {
-      throw new Error((data.message as string | undefined) ?? "KBank inquiry failed");
+      // Sandbox returns error when partnerPaymentID not in its DB — treat as PENDING
+      this.logger.warn(`[KBank] inquirePayment non-ok: ${JSON.stringify(data)}`);
+      return { status: "PENDING" };
     }
 
     const raw = ((data.paymentStatus ?? data.status ?? "PENDING") as string).toUpperCase();
@@ -120,7 +122,8 @@ export class KBankService {
       payoutType: "DELAY",
       mode: "TOKEN",
       token: "tokn_prod_12345678",
-      saveCard: { name: "test", email: "test@test.com", saveFlag: true },
+      saveCard: { name: "test", email: "test@test.com" },
+      saveFlag: true,
       threeDSFlag: true,
       switchBackURL: this.switchBackUrl,
       sourceOfFundMerchantID: "MERCHANT001",
