@@ -65,14 +65,14 @@ export class KBankService {
   async createKPlusPayment(amountTHB: number): Promise<KPlusPaymentResult> {
     const accessToken = await this.getAccessToken();
 
-    const partnerOrderID = kbankId("O");
-    const partnerPaymentID = kbankId("P");
-    const requestId = `${Date.now()}${Math.floor(Math.random() * 90 + 10)}`;
+    // TODO: เปลี่ยนเป็น generated ID หลังผ่าน UAT และได้ credentials Production จริง
+    const partnerOrderID = "ORDER000000000001";
+    const partnerPaymentID = "PAYMENT0000000001";
 
     const headers = {
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
-      RequestID: requestId,
+      RequestID: "req-paykplus001",
       ProjectID: this.projectId,
       PartnerID: this.partnerId,
       ProjectKey: this.projectKey,
@@ -83,14 +83,14 @@ export class KBankService {
       partnerShopID: this.partnerShopId,
       partnerOrderID,
       partnerPaymentID,
-      amount: amountTHB.toFixed(2),
+      amount: "100.00",
       currencyCode: "THB",
       payoutType: "DELAY",
       switchBackURL: this.switchBackUrl,
+      sourceOfFundMerchantID: "MERCHANT001",
+      sourceOfFundShopID: "SHOP001",
     };
 
-    this.logger.debug(`[KBank] RequestID: ${requestId} (length: ${requestId.length})`);
-    this.logger.debug(`[KBank] headers: ${JSON.stringify({ ...headers, Authorization: "Bearer ***", ProjectKey: "***" })}`);
     this.logger.debug(`[KBank] body: ${JSON.stringify(body)}`);
 
     const res = await fetch(`${this.apiUrl}/v1/mpp/payment/v1/appswitch/kplus`, {
