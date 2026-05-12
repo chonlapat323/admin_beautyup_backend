@@ -127,7 +127,7 @@ export class RewardProductsService {
       pointCost: number;
       stock: number;
       isActive: boolean;
-      orderedImages: OrderedImageItem[];
+      orderedImages: Array<{ kind: "existing" | "temp"; id?: string; filename?: string }>;
     }>,
   ) {
     await this.findOne(id);
