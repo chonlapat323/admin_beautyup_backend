@@ -28,6 +28,7 @@ import { MobileModule } from "./modules/mobile/mobile.module";
 import { CommissionModule } from "./modules/commission/commission.module";
 import { SalonCodesModule } from "./modules/salon-codes/salon-codes.module";
 import { RewardProductsModule } from "./modules/reward-products/reward-products.module";
+import { CreditTransactionsModule } from "./modules/credit-transactions/credit-transactions.module";
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { RewardProductsModule } from "./modules/reward-products/reward-products.
     UploadsModule,
     SalonCodesModule,
     RewardProductsModule,
+    CreditTransactionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
