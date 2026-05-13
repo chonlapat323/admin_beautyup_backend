@@ -41,6 +41,8 @@ class UpdateMemberDto {
   @IsOptional()
   @IsEnum(["REGULAR", "SALON"])
   memberType?: "REGULAR" | "SALON";
+
+  @ApiPropertyOptional() @IsOptional() @IsString() adminEmail?: string;
 }
 
 class CreateAddressDto {
@@ -103,6 +105,8 @@ class UpdateMemberStatusDto {
   @ApiProperty({ example: true })
   @IsBoolean()
   isActive!: boolean;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() adminEmail?: string;
 }
 
 class ListMembersQueryDto {
@@ -160,19 +164,20 @@ export class MembersController {
   @Patch(":id")
   @ApiOperation({ summary: "Update member" })
   update(@Param("id") id: string, @Body() dto: UpdateMemberDto) {
-    return this.membersService.update(id, dto);
+    const { adminEmail, ...payload } = dto;
+    return this.membersService.update(id, payload, adminEmail);
   }
 
   @Patch(":id/status")
   @ApiOperation({ summary: "Update member status" })
   updateStatus(@Param("id") id: string, @Body() dto: UpdateMemberStatusDto) {
-    return this.membersService.updateStatus(id, dto.isActive);
+    return this.membersService.updateStatus(id, dto.isActive, dto.adminEmail);
   }
 
   @Delete(":id")
   @ApiOperation({ summary: "Delete member" })
-  remove(@Param("id") id: string) {
-    return this.membersService.remove(id);
+  remove(@Param("id") id: string, @Query("adminEmail") adminEmail?: string) {
+    return this.membersService.remove(id, adminEmail);
   }
 
   // ─── Addresses ────────────────────────────────────────────────────────────────

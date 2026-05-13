@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { AuditLogModule } from "./modules/audit-log/audit-log.module";
 import { AdminUsersModule } from "./modules/admin-users/admin-users.module";
 import { BannersModule } from "./modules/banners/banners.module";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -35,6 +36,7 @@ import { RewardProductsModule } from "./modules/reward-products/reward-products.
       cache: true,
     }),
     PrismaModule,
+    AuditLogModule,
     KBankModule,
     MobileModule,
     CommissionModule,

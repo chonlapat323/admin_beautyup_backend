@@ -401,6 +401,16 @@ model CommissionPayout {
   createdAt   DateTime     @default(now())
 }
 
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminEmail String
+  action     String
+  entityType String
+  entityId   String
+  detail     String?
+  createdAt  DateTime @default(now())
+}
+
 model CreditTransaction {
   id         String                @id @default(cuid())
   memberId   String

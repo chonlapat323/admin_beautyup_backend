@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { CommissionService } from "../commission/commission.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { StockService } from "../stock/stock.service";
@@ -11,6 +12,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly commissionService: CommissionService,
     private readonly stockService: StockService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   async findAll() {
@@ -99,6 +101,7 @@ export class OrdersService {
       }
     }
 
+    void this.auditLog.log({ adminEmail: changedByName, action: "order.status_change", entityType: "order", entityId: id, detail: JSON.stringify({ from: order.status, to: status }) });
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
 }

@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class StockService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditLog: AuditLogService,
+  ) {}
 
   async summary() {
     return this.prisma.product.findMany({
@@ -20,7 +24,7 @@ export class StockService {
     });
   }
 
-  async adjust(dto: { productId: string; delta: number; reason: string }) {
+  async adjust(dto: { productId: string; delta: number; reason: string; adminEmail?: string }) {
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({ where: { id: dto.productId } });
       if (!product) throw new NotFoundException("ไม่พบสินค้า");
@@ -38,7 +42,9 @@ export class StockService {
         data: { productId: dto.productId, delta: dto.delta, reason: dto.reason, type: "ADJUSTMENT" },
       });
 
-      return { productId: dto.productId, stock: newStock, reserveStock: newReserve, sellableStock: newSellable };
+      const result = { productId: dto.productId, stock: newStock, reserveStock: newReserve, sellableStock: newSellable };
+      void this.auditLog.log({ adminEmail: dto.adminEmail ?? "system", action: "stock.adjust", entityType: "product", entityId: dto.productId, detail: JSON.stringify({ delta: dto.delta, reason: dto.reason }) });
+      return result;
     });
   }
 

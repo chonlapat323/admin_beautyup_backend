@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { AuditLogService } from "../audit-log/audit-log.service";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -17,6 +18,7 @@ export class MembersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly flowAccount: FlowAccountService,
+    private readonly auditLog: AuditLogService,
   ) {}
 
   private syncDefaultAddressToFlowAccount(memberId: string, address: {
@@ -56,6 +58,7 @@ export class MembersService {
         take: params.pageSize,
         include: {
           _count: { select: { orders: true, referrals: true } },
+          referredBy: { select: { id: true, fullName: true } },
         },
       }),
       this.prisma.member.count({ where }),
@@ -115,7 +118,10 @@ export class MembersService {
   async findOne(id: string) {
     const member = await this.prisma.member.findUnique({
       where: { id },
-      include: { _count: { select: { orders: true, referrals: true } } },
+      include: {
+        _count: { select: { orders: true, referrals: true } },
+        referredBy: { select: { id: true, fullName: true } },
+      },
     });
     if (!member) throw new NotFoundException("ไม่พบสมาชิก");
     return member;
@@ -123,18 +129,21 @@ export class MembersService {
 
   async update(
     id: string,
-    payload: {
-      fullName?: string;
-      memberType?: "REGULAR" | "SALON";
-    },
+    payload: { fullName?: string; memberType?: "REGULAR" | "SALON" },
+    adminEmail = "system",
   ) {
     await this.findOne(id);
     try {
-      return await this.prisma.member.update({
+      const result = await this.prisma.member.update({
         where: { id },
         data: payload,
-        include: { _count: { select: { orders: true, referrals: true } } },
+        include: {
+          _count: { select: { orders: true, referrals: true } },
+          referredBy: { select: { id: true, fullName: true } },
+        },
       });
+      void this.auditLog.log({ adminEmail, action: "member.update", entityType: "member", entityId: id, detail: JSON.stringify(payload) });
+      return result;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         throw new BadRequestException("อีเมลหรือเบอร์โทรนี้ถูกใช้งานแล้ว");
@@ -143,13 +152,18 @@ export class MembersService {
     }
   }
 
-  async updateStatus(id: string, isActive: boolean) {
+  async updateStatus(id: string, isActive: boolean, adminEmail = "system") {
     await this.findOne(id);
-    return this.prisma.member.update({
+    const result = await this.prisma.member.update({
       where: { id },
       data: { isActive },
-      include: { _count: { select: { orders: true, referrals: true } } },
+      include: {
+        _count: { select: { orders: true, referrals: true } },
+        referredBy: { select: { id: true, fullName: true } },
+      },
     });
+    void this.auditLog.log({ adminEmail, action: "member.status_change", entityType: "member", entityId: id, detail: JSON.stringify({ isActive }) });
+    return result;
   }
 
   // ─── Addresses ────────────────────────────────────────────────────────────────
@@ -242,10 +256,12 @@ export class MembersService {
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, adminEmail = "system") {
     await this.findOne(id);
     try {
-      return await this.prisma.member.delete({ where: { id } });
+      const result = await this.prisma.member.delete({ where: { id } });
+      void this.auditLog.log({ adminEmail, action: "member.delete", entityType: "member", entityId: id });
+      return result;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
         throw new BadRequestException("ไม่สามารถลบสมาชิกที่มีคำสั่งซื้อได้");
