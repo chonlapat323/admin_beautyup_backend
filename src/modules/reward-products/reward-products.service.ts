@@ -3,10 +3,6 @@ import { join } from "path";
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 
-type OrderedImageItem =
-  | { kind: "existing"; id: string }
-  | { kind: "temp"; filename: string };
-
 @Injectable()
 export class RewardProductsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -43,7 +39,7 @@ export class RewardProductsService {
     }
   }
 
-  private async applyOrderedImages(rewardProductId: string, orderedImages: OrderedImageItem[]) {
+  private async applyOrderedImages(rewardProductId: string, orderedImages: Array<{ kind: "existing" | "temp"; id?: string; filename?: string }>) {
     const existing = await this.prisma.rewardProductImage.findMany({ where: { rewardProductId } });
     const keptIds = new Set(
       orderedImages.filter((i): i is { kind: "existing"; id: string } => i.kind === "existing").map((i) => i.id),
@@ -62,9 +58,11 @@ export class RewardProductsService {
     for (let i = 0; i < orderedImages.length; i++) {
       const item = orderedImages[i];
       if (item.kind === "existing") {
+        if (!item.id) continue;
         await this.prisma.rewardProductImage.update({ where: { id: item.id }, data: { sortOrder: i } });
         if (i === 0) firstUrl = existing.find((e) => e.id === item.id)?.url;
       } else {
+        if (!item.filename) continue;
         const url = this.moveTempToReward(item.filename);
         if (!url) continue;
         await this.prisma.rewardProductImage.create({ data: { rewardProductId, url, sortOrder: i } });
