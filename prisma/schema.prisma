@@ -235,8 +235,19 @@ model Product {
   flowAccountItemId String?
   images            ProductImage[]
   orderItems        OrderItem[]
+  stockMovements    StockMovement[]
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  delta     Int
+  type      String
+  reason    String
+  createdAt DateTime @default(now())
 }
 
 model ProductImage {

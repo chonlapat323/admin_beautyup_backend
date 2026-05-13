@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { CommissionService } from "../commission/commission.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { StockService } from "../stock/stock.service";
 
 @Injectable()
 export class OrdersService {
@@ -9,6 +10,7 @@ export class OrdersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly commissionService: CommissionService,
+    private readonly stockService: StockService,
   ) {}
 
   async findAll() {
@@ -75,6 +77,9 @@ export class OrdersService {
           where: { id: order.memberId },
           data: { pointBalance: { increment: order.pointEarned } },
         });
+      }
+      if (isFirstPaid) {
+        await this.stockService.decrementForOrder(id, tx);
       }
       return updatedOrder;
     });
