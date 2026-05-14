@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Put } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsInt, IsNumber, IsOptional, Min, ValidateNested } from "class-validator";
+import { IsArray, IsInt, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 import { SettingsService } from "./settings.service";
@@ -36,6 +36,16 @@ class UpdateSettingsDto {
   @ValidateNested({ each: true })
   @Type(() => PointTierDto)
   pointTiers?: PointTierDto[];
+
+  @ApiProperty({ example: "https://youtube.com/@beautyup", required: false })
+  @IsOptional()
+  @IsString()
+  youtubeUrl?: string;
+
+  @ApiProperty({ example: "https://tiktok.com/@beautyup", required: false })
+  @IsOptional()
+  @IsString()
+  tiktokUrl?: string;
 }
 
 @ApiTags("Settings")

@@ -11,6 +11,11 @@ const DEFAULTS = {
 
 type SettingKey = keyof typeof DEFAULTS;
 
+const STRING_DEFAULTS: Record<string, string> = {
+  youtube_url: "",
+  tiktok_url: "",
+};
+
 export type PointTier = { minSpend: number; points: number };
 
 const POINT_TIERS_DEFAULT: PointTier[] = [
@@ -29,6 +34,8 @@ export class SettingsService {
 
     const num = (key: SettingKey) => parseFloat(map[key] ?? "") || DEFAULTS[key];
 
+    const str = (key: string) => map[key] ?? STRING_DEFAULTS[key] ?? "";
+
     return {
       shipping: {
         freeShippingThreshold: num("free_shipping_threshold"),
@@ -40,6 +47,10 @@ export class SettingsService {
       referral: { commissionRate: num("referral_commission_rate") },
       stock: { reservePercentage: num("stock_reserve_percentage") },
       payment: { gatewayFee: num("gateway_fee") },
+      social: {
+        youtubeUrl: str("youtube_url"),
+        tiktokUrl: str("tiktok_url"),
+      },
     };
   }
 
@@ -63,12 +74,16 @@ export class SettingsService {
     defaultShippingFee?: number;
     gatewayFee?: number;
     pointTiers?: PointTier[];
+    youtubeUrl?: string;
+    tiktokUrl?: string;
   }) {
     const pairs: [string, string | undefined][] = [
       ["free_shipping_threshold", payload.freeShippingThreshold !== undefined ? String(payload.freeShippingThreshold) : undefined],
       ["default_shipping_fee", payload.defaultShippingFee !== undefined ? String(payload.defaultShippingFee) : undefined],
       ["gateway_fee", payload.gatewayFee !== undefined ? String(payload.gatewayFee) : undefined],
       ["point_tiers", payload.pointTiers !== undefined ? JSON.stringify(payload.pointTiers) : undefined],
+      ["youtube_url", payload.youtubeUrl !== undefined ? payload.youtubeUrl : undefined],
+      ["tiktok_url", payload.tiktokUrl !== undefined ? payload.tiktokUrl : undefined],
     ];
 
     await Promise.all(

@@ -49,11 +49,14 @@ export class MobileService {
   ) {}
 
   async getConfig() {
-    const [gatewayFee, pointTiers] = await Promise.all([
-      this.settingsService.getValue("gateway_fee"),
-      this.settingsService.getPointTiers(),
-    ]);
-    return { gatewayFee, pointTiers };
+    const settings = await this.settingsService.getAll();
+    return {
+      gatewayFee: settings.payment.gatewayFee,
+      pointTiers: settings.points.tiers,
+      freeShippingThreshold: settings.shipping.freeShippingThreshold,
+      defaultShippingFee: settings.shipping.defaultShippingFee,
+      social: settings.social,
+    };
   }
 
   async register(payload: {
@@ -199,8 +202,12 @@ export class MobileService {
     });
 
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
-    const shippingAmount = 0;
-    const gatewayFee = await this.settingsService.getValue("gateway_fee");
+    const [gatewayFee, freeThreshold, defaultFee] = await Promise.all([
+      this.settingsService.getValue("gateway_fee"),
+      this.settingsService.getValue("free_shipping_threshold"),
+      this.settingsService.getValue("default_shipping_fee"),
+    ]);
+    const shippingAmount = subtotal >= freeThreshold ? 0 : defaultFee;
     const totalAmount = subtotal + shippingAmount + gatewayFee;
 
     // ── Credit validation ────────────────────────────────────────────────────────
@@ -498,8 +505,13 @@ export class MobileService {
     });
 
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
-    const gatewayFee = await this.settingsService.getValue("gateway_fee");
-    const totalAmount = subtotal + gatewayFee;
+    const [gatewayFee, freeThreshold, defaultFee] = await Promise.all([
+      this.settingsService.getValue("gateway_fee"),
+      this.settingsService.getValue("free_shipping_threshold"),
+      this.settingsService.getValue("default_shipping_fee"),
+    ]);
+    const shippingAmount = subtotal >= freeThreshold ? 0 : defaultFee;
+    const totalAmount = subtotal + shippingAmount + gatewayFee;
     const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
     const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
 
@@ -524,6 +536,7 @@ export class MobileService {
         checkoutData: {
           items: orderItems,
           subtotal,
+          shippingAmount,
           gatewayFee,
           totalAmount,
           creditAmount,
@@ -563,8 +576,13 @@ export class MobileService {
     });
 
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
-    const gatewayFee = await this.settingsService.getValue("gateway_fee");
-    const totalAmount = subtotal + gatewayFee;
+    const [gatewayFee, freeThreshold, defaultFee] = await Promise.all([
+      this.settingsService.getValue("gateway_fee"),
+      this.settingsService.getValue("free_shipping_threshold"),
+      this.settingsService.getValue("default_shipping_fee"),
+    ]);
+    const shippingAmount = subtotal >= freeThreshold ? 0 : defaultFee;
+    const totalAmount = subtotal + shippingAmount + gatewayFee;
     const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
     const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
 
@@ -590,6 +608,7 @@ export class MobileService {
         checkoutData: {
           items: orderItems,
           subtotal,
+          shippingAmount,
           gatewayFee,
           totalAmount,
           creditAmount,
@@ -642,8 +661,13 @@ export class MobileService {
     });
 
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
-    const gatewayFee = await this.settingsService.getValue("gateway_fee");
-    const totalAmount = subtotal + gatewayFee;
+    const [gatewayFee, freeThreshold, defaultFee] = await Promise.all([
+      this.settingsService.getValue("gateway_fee"),
+      this.settingsService.getValue("free_shipping_threshold"),
+      this.settingsService.getValue("default_shipping_fee"),
+    ]);
+    const shippingAmount = subtotal >= freeThreshold ? 0 : defaultFee;
+    const totalAmount = subtotal + shippingAmount + gatewayFee;
     const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
     const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
 
@@ -659,6 +683,7 @@ export class MobileService {
     const checkoutData = {
       items: orderItems,
       subtotal,
+      shippingAmount,
       gatewayFee,
       totalAmount,
       creditAmount,
@@ -706,8 +731,13 @@ export class MobileService {
     });
 
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
-    const gatewayFee = await this.settingsService.getValue("gateway_fee");
-    const totalAmount = subtotal + gatewayFee;
+    const [gatewayFee, freeThreshold, defaultFee] = await Promise.all([
+      this.settingsService.getValue("gateway_fee"),
+      this.settingsService.getValue("free_shipping_threshold"),
+      this.settingsService.getValue("default_shipping_fee"),
+    ]);
+    const shippingAmount = subtotal >= freeThreshold ? 0 : defaultFee;
+    const totalAmount = subtotal + shippingAmount + gatewayFee;
     const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
     const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
 
@@ -721,6 +751,7 @@ export class MobileService {
     const checkoutData = {
       items: orderItems,
       subtotal,
+      shippingAmount,
       gatewayFee,
       totalAmount,
       creditAmount,
@@ -764,8 +795,13 @@ export class MobileService {
     });
 
     const subtotal = orderItems.reduce((s, i) => s + i.totalPrice, 0);
-    const gatewayFee = await this.settingsService.getValue("gateway_fee");
-    const totalAmount = subtotal + gatewayFee;
+    const [gatewayFee, freeThreshold, defaultFee] = await Promise.all([
+      this.settingsService.getValue("gateway_fee"),
+      this.settingsService.getValue("free_shipping_threshold"),
+      this.settingsService.getValue("default_shipping_fee"),
+    ]);
+    const shippingAmount = subtotal >= freeThreshold ? 0 : defaultFee;
+    const totalAmount = subtotal + shippingAmount + gatewayFee;
     const creditAmount = Math.min(payload.creditAmount ?? 0, totalAmount);
     const chargeAmount = Math.round((totalAmount - creditAmount) * 100) / 100;
 
@@ -779,6 +815,7 @@ export class MobileService {
     const checkoutData = {
       items: orderItems,
       subtotal,
+      shippingAmount,
       gatewayFee,
       totalAmount,
       creditAmount,
@@ -818,6 +855,7 @@ export class MobileService {
       type CheckoutData = {
         items: { productId: string; sku: string; name: string; quantity: number; unitPrice: number; totalPrice: number }[];
         subtotal: number;
+        shippingAmount?: number;
         gatewayFee: number;
         totalAmount: number;
         creditAmount?: number;
@@ -839,7 +877,7 @@ export class MobileService {
             memberId,
             status: "PAID",
             subtotalAmount: data.subtotal,
-            shippingAmount: 0,
+            shippingAmount: data.shippingAmount ?? 0,
             gatewayFee: data.gatewayFee,
             totalAmount: data.totalAmount,
             pointEarned,
@@ -909,6 +947,7 @@ export class MobileService {
       type CheckoutData = {
         items: { productId: string; sku: string; name: string; quantity: number; unitPrice: number; totalPrice: number }[];
         subtotal: number;
+        shippingAmount?: number;
         gatewayFee: number;
         totalAmount: number;
         creditAmount?: number;
@@ -931,7 +970,7 @@ export class MobileService {
             memberId,
             status: "PAID",
             subtotalAmount: data.subtotal,
-            shippingAmount: 0,
+            shippingAmount: data.shippingAmount ?? 0,
             gatewayFee: data.gatewayFee,
             totalAmount: data.totalAmount,
             pointEarned,
