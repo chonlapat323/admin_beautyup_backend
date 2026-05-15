@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Put } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsInt, IsOptional, IsString, Min, ValidateNested } from "class-validator";
+import { IsArray, IsInt, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 import { SettingsService } from "./settings.service";
