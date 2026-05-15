@@ -138,6 +138,19 @@ describe("CategoriesService", () => {
       expect(result.meta.hasNextPage).toBe(true);
       expect(result.meta.hasPreviousPage).toBe(true);
     });
+
+    it("ควร return items=[] และ totalPages=1 เมื่อไม่มีข้อมูล", async () => {
+      // Arrange
+      mockPrisma.$transaction.mockResolvedValue([[], 0]);
+
+      // Act
+      const result = await service.findAll({ page: 1, pageSize: 10 });
+
+      // Assert
+      expect(result.items).toEqual([]);
+      expect(result.meta.totalItems).toBe(0);
+      expect(result.meta.totalPages).toBe(1); // Math.max(1, ...) ต้องไม่เป็น 0
+    });
   });
 
   // ─── findOne ───────────────────────────────────────────────────────────────
@@ -181,20 +194,119 @@ describe("CategoriesService", () => {
       );
     });
 
-    it("ควรย้ายไฟล์และใช้ URL ใหม่เมื่อมี tempImageFile", async () => {
+    it("ควรย้ายไฟล์และใช้ URL ใหม่เมื่อมี tempImageFile และไฟล์มีอยู่จริง", async () => {
       // Arrange
-      mockExistsSync.mockReturnValue(true);  // ไฟล์ temp มีอยู่จริง
+      mockExistsSync.mockReturnValue(true);
       mockRenameSync.mockImplementation(() => {});
       mockPrisma.category.create.mockResolvedValue(mockCategory);
 
       // Act
       await service.create({ name: "Color", slug: "color", tempImageFile: "new.jpg" });
 
-      // Assert — renameSync ถูกเรียก (ย้ายไฟล์)
+      // Assert
       expect(mockRenameSync).toHaveBeenCalled();
-      // imageUrl ต้องเป็น URL ใหม่ ไม่ใช่ undefined
       const data = mockPrisma.category.create.mock.calls[0][0].data;
       expect(data.imageUrl).toContain("new.jpg");
+    });
+
+    it("ควร fallback ไปใช้ payload.imageUrl เมื่อ tempImageFile ไม่พบในระบบ", async () => {
+      // Arrange — ไฟล์ temp ไม่มีอยู่จริง → moveTempToCategory return null
+      mockExistsSync.mockReturnValue(false);
+      mockPrisma.category.create.mockResolvedValue(mockCategory);
+
+      // Act
+      await service.create({ name: "Color", slug: "color", tempImageFile: "missing.jpg", imageUrl: "http://fallback.jpg" });
+
+      // Assert — ใช้ imageUrl จาก payload แทน
+      const data = mockPrisma.category.create.mock.calls[0][0].data;
+      expect(data.imageUrl).toBe("http://fallback.jpg");
+    });
+  });
+
+  // ─── update ────────────────────────────────────────────────────────────────
+
+  describe("update", () => {
+    it("ควรอัปเดต fields ที่ส่งมาได้ถูกต้อง", async () => {
+      // Arrange
+      mockPrisma.category.findFirst.mockResolvedValue(mockCategory);
+      mockPrisma.category.update.mockResolvedValue({ ...mockCategory, name: "New Name" });
+
+      // Act
+      await service.update("c1", { name: "New Name" });
+
+      // Assert
+      expect(mockPrisma.category.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: "c1" },
+          data: expect.objectContaining({ name: "New Name" }),
+        })
+      );
+    });
+
+    it("ควรย้ายไฟล์ ลบรูปเก่า และใช้ URL ใหม่เมื่อมี tempImageFile", async () => {
+      // Arrange — category มี imageUrl เก่าอยู่แล้ว
+      mockPrisma.category.findFirst.mockResolvedValue(mockCategory);
+      mockExistsSync.mockReturnValue(true);
+      mockRenameSync.mockImplementation(() => {});
+      mockPrisma.category.update.mockResolvedValue(mockCategory);
+
+      // Act
+      await service.update("c1", { tempImageFile: "new.jpg" });
+
+      // Assert — ย้ายไฟล์ใหม่ และ imageUrl ถูกอัปเดต
+      expect(mockRenameSync).toHaveBeenCalled();
+      const data = mockPrisma.category.update.mock.calls[0][0].data;
+      expect(data.imageUrl).toContain("new.jpg");
+    });
+
+    it("ควรใช้ payload.imageUrl เมื่อไม่มี tempImageFile", async () => {
+      // Arrange
+      mockPrisma.category.findFirst.mockResolvedValue(mockCategory);
+      mockPrisma.category.update.mockResolvedValue(mockCategory);
+
+      // Act
+      await service.update("c1", { imageUrl: "http://new-img.jpg" });
+
+      // Assert
+      const data = mockPrisma.category.update.mock.calls[0][0].data;
+      expect(data.imageUrl).toBe("http://new-img.jpg");
+    });
+
+    it("ควรไม่ update imageUrl เมื่อ tempImageFile ไม่พบในระบบ (moveTempToCategory return null)", async () => {
+      // Arrange — ไฟล์ temp ไม่มีอยู่จริง
+      mockPrisma.category.findFirst.mockResolvedValue(mockCategory);
+      mockExistsSync.mockReturnValue(false);
+      mockPrisma.category.update.mockResolvedValue(mockCategory);
+
+      // Act
+      await service.update("c1", { tempImageFile: "missing.jpg", imageUrl: "http://fallback.jpg" });
+
+      // Assert — ใช้ imageUrl จาก payload (moved = null จึง fallback)
+      const data = mockPrisma.category.update.mock.calls[0][0].data;
+      expect(data.imageUrl).toBe("http://fallback.jpg");
+    });
+
+    it("ควรไม่ลบรูปเก่าเมื่อ existing.imageUrl เป็น null", async () => {
+      // Arrange — category ไม่มีรูปเก่า
+      mockPrisma.category.findFirst.mockResolvedValue({ ...mockCategory, imageUrl: null });
+      mockExistsSync.mockReturnValue(true);
+      mockRenameSync.mockImplementation(() => {});
+      mockPrisma.category.update.mockResolvedValue(mockCategory);
+
+      // Act
+      await service.update("c1", { tempImageFile: "new.jpg" });
+
+      // Assert — unlinkSync ต้องไม่ถูกเรียก
+      const { unlinkSync } = require("fs");
+      expect(unlinkSync).not.toHaveBeenCalled();
+    });
+
+    it("ควร throw NotFoundException เมื่อไม่พบ category", async () => {
+      // Arrange
+      mockPrisma.category.findFirst.mockResolvedValue(null);
+
+      // Assert
+      await expect(service.update("not-exist", { name: "X" })).rejects.toThrow(NotFoundException);
     });
   });
 
