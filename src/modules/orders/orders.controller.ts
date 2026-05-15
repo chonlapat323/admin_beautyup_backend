@@ -46,4 +46,10 @@ export class OrdersController {
   updateStatus(@Param("id") id: string, @Body() dto: UpdateOrderStatusDto) {
     return this.ordersService.updateStatus(id, dto.status, dto.changedByName ?? "Admin");
   }
+
+  @Patch(":id/tracking")
+  @ApiOperation({ summary: "Update tracking number" })
+  updateTracking(@Param("id") id: string, @Body() dto: { trackingNumber: string }) {
+    return this.ordersService.updateTracking(id, dto.trackingNumber ?? "");
+  }
 }

@@ -104,4 +104,11 @@ export class OrdersService {
     void this.auditLog.log({ adminEmail: changedByName, action: "order.status_change", entityType: "order", entityId: id, detail: JSON.stringify({ from: order.status, to: status }) });
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
+
+  async updateTracking(id: string, trackingNumber: string) {
+    const order = await this.prisma.order.findUnique({ where: { id }, select: { id: true } });
+    if (!order) throw new Error("Order not found");
+    await this.prisma.order.update({ where: { id }, data: { trackingNumber } });
+    return { message: "Tracking number updated.", id, trackingNumber };
+  }
 }

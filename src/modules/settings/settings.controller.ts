@@ -26,6 +26,11 @@ class UpdateSettingsDto {
   @IsNumber()
   gatewayFee?: number;
 
+  @ApiProperty({ example: 0.03, required: false, description: "Referral commission rate (0.03 = 3%)" })
+  @IsOptional()
+  @IsNumber()
+  referralCommissionRate?: number;
+
   @ApiProperty({
     type: [PointTierDto],
     required: false,

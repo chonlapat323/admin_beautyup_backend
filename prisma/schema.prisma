@@ -278,6 +278,7 @@ model Order {
   shippingName   String?
   shippingPhone  String?
   shippingAddr   String?
+  trackingNumber        String?
   chargeId              String?
   paymentMethod         String?
   flowAccountDocId      Int?
