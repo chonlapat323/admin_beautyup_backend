@@ -66,7 +66,7 @@ describe("ReportsService", () => {
       expect(result).toEqual([]);
     });
 
-    it("ควรส่ง createdAt filter ไปยัง Prisma เมื่อมี dateFrom และ dateTo", async () => {
+    it("ควรส่ง gte และ lte เมื่อมีทั้ง dateFrom และ dateTo", async () => {
       // Arrange
       mockPrisma.orderItem.findMany.mockResolvedValue([]);
 
@@ -80,11 +80,52 @@ describe("ReportsService", () => {
             order: expect.objectContaining({
               createdAt: expect.objectContaining({
                 gte: new Date("2026-01-01"),
+                lte: expect.any(Date),
               }),
             }),
           }),
         })
       );
+    });
+
+    it("ควรส่งเฉพาะ gte เมื่อมีแค่ dateFrom", async () => {
+      // Arrange
+      mockPrisma.orderItem.findMany.mockResolvedValue([]);
+
+      // Act
+      await service.salesByProduct({ dateFrom: "2026-01-01" });
+
+      // Assert
+      const call = mockPrisma.orderItem.findMany.mock.calls[0][0];
+      expect(call.where.order.createdAt).toEqual(expect.objectContaining({ gte: new Date("2026-01-01") }));
+      expect(call.where.order.createdAt.lte).toBeUndefined();
+    });
+
+    it("ควรส่งเฉพาะ lte (end of day) เมื่อมีแค่ dateTo", async () => {
+      // Arrange
+      mockPrisma.orderItem.findMany.mockResolvedValue([]);
+
+      // Act
+      await service.salesByProduct({ dateTo: "2026-01-31" });
+
+      // Assert
+      const call = mockPrisma.orderItem.findMany.mock.calls[0][0];
+      const lte: Date = call.where.order.createdAt.lte;
+      expect(lte.getHours()).toBe(23);
+      expect(lte.getMinutes()).toBe(59);
+      expect(call.where.order.createdAt.gte).toBeUndefined();
+    });
+
+    it("ควรไม่ส่ง createdAt filter เมื่อไม่มี dateFrom และ dateTo", async () => {
+      // Arrange
+      mockPrisma.orderItem.findMany.mockResolvedValue([]);
+
+      // Act
+      await service.salesByProduct({});
+
+      // Assert
+      const call = mockPrisma.orderItem.findMany.mock.calls[0][0];
+      expect(call.where.order.createdAt).toBeUndefined();
     });
   });
 
