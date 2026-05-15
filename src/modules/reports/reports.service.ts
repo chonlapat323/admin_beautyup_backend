@@ -20,22 +20,6 @@ function buildDateWhere(range: DateRange): Prisma.DateTimeFilter | undefined {
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  dashboard() {
-    return {
-      totalSales: 12000,
-      totalOrders: 45,
-      totalMembers: 128,
-      lowStockProducts: 3,
-    };
-  }
-
-  salesByStore() {
-    return [
-      { storeId: "store_main", storeName: "Main Store", totalSales: 9000 },
-      { storeId: "store_bkk", storeName: "Bangkok Branch", totalSales: 3000 },
-    ];
-  }
-
   async salesByProduct(range: DateRange) {
     const createdAt = buildDateWhere(range);
     const orderWhere: Prisma.OrderWhereInput = { status: "PAID" };
@@ -103,9 +87,4 @@ export class ReportsService {
     }));
   }
 
-  inventory() {
-    return [
-      { sku: "SKU-001", productName: "Koleston Perfect", stock: 200, sellableStock: 180 },
-    ];
-  }
 }

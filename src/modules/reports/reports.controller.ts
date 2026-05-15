@@ -13,24 +13,6 @@ class DateRangeQuery {
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
-  @Get("dashboard")
-  @ApiOperation({ summary: "Get dashboard report" })
-  dashboard() {
-    return this.reportsService.dashboard();
-  }
-
-  @Get("sales-by-store")
-  @ApiOperation({ summary: "Get sales by store report" })
-  salesByStore() {
-    return this.reportsService.salesByStore();
-  }
-
-  @Get("inventory")
-  @ApiOperation({ summary: "Get inventory report" })
-  inventory() {
-    return this.reportsService.inventory();
-  }
-
   @Get("sales-by-product")
   @ApiOperation({ summary: "Sales revenue grouped by product (PAID orders)" })
   salesByProduct(@Query() query: DateRangeQuery) {
