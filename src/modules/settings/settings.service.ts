@@ -4,7 +4,6 @@ import { PrismaService } from "../prisma/prisma.service";
 const DEFAULTS = {
   free_shipping_threshold: 1000,
   default_shipping_fee: 50,
-  referral_commission_rate: 0.03,
   stock_reserve_percentage: 10,
   gateway_fee: 20,
 } as const;
@@ -44,7 +43,6 @@ export class SettingsService {
       points: {
         tiers: this.parsePointTiers(map["point_tiers"]),
       },
-      referral: { commissionRate: num("referral_commission_rate") },
       stock: { reservePercentage: num("stock_reserve_percentage") },
       payment: { gatewayFee: num("gateway_fee") },
       social: {
@@ -73,7 +71,6 @@ export class SettingsService {
     freeShippingThreshold?: number;
     defaultShippingFee?: number;
     gatewayFee?: number;
-    referralCommissionRate?: number;
     pointTiers?: PointTier[];
     youtubeUrl?: string;
     tiktokUrl?: string;
@@ -82,7 +79,6 @@ export class SettingsService {
       ["free_shipping_threshold", payload.freeShippingThreshold !== undefined ? String(payload.freeShippingThreshold) : undefined],
       ["default_shipping_fee", payload.defaultShippingFee !== undefined ? String(payload.defaultShippingFee) : undefined],
       ["gateway_fee", payload.gatewayFee !== undefined ? String(payload.gatewayFee) : undefined],
-      ["referral_commission_rate", payload.referralCommissionRate !== undefined ? String(payload.referralCommissionRate) : undefined],
       ["point_tiers", payload.pointTiers !== undefined ? JSON.stringify(payload.pointTiers) : undefined],
       ["youtube_url", payload.youtubeUrl !== undefined ? payload.youtubeUrl : undefined],
       ["tiktok_url", payload.tiktokUrl !== undefined ? payload.tiktokUrl : undefined],

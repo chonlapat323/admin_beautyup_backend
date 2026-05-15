@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Put } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsInt, IsNumber, IsOptional, IsString, Min, ValidateNested } from "class-validator";
+import { IsArray, IsInt, IsOptional, IsString, Min, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 
 import { SettingsService } from "./settings.service";
@@ -25,11 +25,6 @@ class UpdateSettingsDto {
   @IsOptional()
   @IsNumber()
   gatewayFee?: number;
-
-  @ApiProperty({ example: 0.03, required: false, description: "Referral commission rate (0.03 = 3%)" })
-  @IsOptional()
-  @IsNumber()
-  referralCommissionRate?: number;
 
   @ApiProperty({
     type: [PointTierDto],
