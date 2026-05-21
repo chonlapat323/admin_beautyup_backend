@@ -1,7 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsInt, IsOptional, IsString, Min } from "class-validator";
+import { IsArray, IsBoolean, IsEnum, IsInt, IsOptional, IsString, Min } from "class-validator";
 import { Type } from "class-transformer";
+import { RedemptionStatus } from "@prisma/client";
 import { RewardProductsService } from "./reward-products.service";
 
 class OrderedImageItemDto {
@@ -28,6 +29,11 @@ class UpdateRewardProductDto {
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
 }
 
+class UpdateRedemptionStatusDto {
+  @ApiProperty({ enum: RedemptionStatus }) @IsEnum(RedemptionStatus) status!: RedemptionStatus;
+  @ApiPropertyOptional() @IsOptional() @IsString() trackingNumber?: string;
+}
+
 @ApiTags("Reward Products")
 @Controller("reward-products")
 export class RewardProductsController {
@@ -43,6 +49,18 @@ export class RewardProductsController {
   @ApiOperation({ summary: "List redemption logs with optional date range" })
   getRedemptions(@Query("from") from?: string, @Query("to") to?: string) {
     return this.service.getRedemptions(from, to);
+  }
+
+  @Get("redemptions/:id")
+  @ApiOperation({ summary: "Get one redemption by id" })
+  getRedemptionById(@Param("id") id: string) {
+    return this.service.getRedemptionById(id);
+  }
+
+  @Patch("redemptions/:id/status")
+  @ApiOperation({ summary: "Update redemption fulfillment status" })
+  updateRedemptionStatus(@Param("id") id: string, @Body() dto: UpdateRedemptionStatusDto) {
+    return this.service.updateRedemptionStatus(id, dto.status, dto.trackingNumber);
   }
 
   @Get(":id")

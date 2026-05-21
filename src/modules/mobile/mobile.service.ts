@@ -1115,6 +1115,25 @@ export class MobileService {
     return { message: "บันทึกบัญชีธนาคารแล้ว" };
   }
 
+  async getAddressForMember(memberId: string, addressId: string) {
+    return this.prisma.memberAddress.findFirst({ where: { id: addressId, memberId } });
+  }
+
+  async getRedemptions(memberId: string) {
+    return this.prisma.rewardRedemption.findMany({
+      where: { memberId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        rewardProduct: { select: { id: true, name: true, imageUrl: true } },
+      },
+    });
+  }
+
+  async updatePushToken(memberId: string, expoPushToken: string) {
+    await this.prisma.member.update({ where: { id: memberId }, data: { expoPushToken } });
+    return { message: "บันทึก push token แล้ว" };
+  }
+
   private safeProfile(member: {
     id: string;
     fullName: string;

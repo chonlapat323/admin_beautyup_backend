@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Headers, Param, Patch, Post, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Patch, Post, UnauthorizedException } from "@nestjs/common";
 import { RewardProductsService } from "../reward-products/reward-products.service";
 import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
@@ -95,6 +95,14 @@ class BankAccountDto {
   @ApiProperty() @IsString() bankName!: string;
   @ApiProperty() @IsString() bankAccountNumber!: string;
   @ApiProperty() @IsString() bankAccountName!: string;
+}
+
+class RedeemRewardDto {
+  @ApiProperty({ description: "ID ของที่อยู่สำหรับจัดส่ง" }) @IsString() addressId!: string;
+}
+
+class UpdatePushTokenDto {
+  @ApiProperty() @IsString() expoPushToken!: string;
 }
 
 class WithdrawalDto {
@@ -322,10 +330,54 @@ export class MobileController {
   }
 
   @Post("rewards/:id/redeem")
-  @ApiOperation({ summary: "Redeem a reward product" })
-  async redeemReward(@Headers("authorization") auth: string, @Param("id") id: string) {
+  @ApiOperation({ summary: "Redeem a reward product with shipping address" })
+  async redeemReward(
+    @Headers("authorization") auth: string,
+    @Param("id") id: string,
+    @Body() dto: RedeemRewardDto,
+  ) {
     const member = await this.extractMember(auth);
-    return this.rewardProductsService.redeem(member.id, id);
+    const address = await this.mobileService.getAddressForMember(member.id, dto.addressId);
+    if (!address) throw new BadRequestException("ไม่พบที่อยู่จัดส่ง");
+
+    const parts = [
+      address.addressLine1,
+      address.addressLine2,
+      address.district,
+      address.province,
+      address.postalCode,
+    ].filter(Boolean);
+    const fullAddressString = parts.join(" ");
+
+    const shipping = {
+      recipient: address.recipient,
+      phone: address.phone,
+      address: fullAddressString,
+    };
+    return this.rewardProductsService.redeem(member.id, id, shipping);
+  }
+
+  @Get("me/redemptions")
+  @ApiOperation({ summary: "Get redemption history for current member" })
+  async getRedemptions(@Headers("authorization") auth: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.getRedemptions(member.id);
+  }
+
+  @Get("me/redemptions/:id")
+  @ApiOperation({ summary: "Get one redemption detail for current member" })
+  async getRedemptionDetail(@Headers("authorization") auth: string, @Param("id") id: string) {
+    const member = await this.extractMember(auth);
+    const redemption = await this.rewardProductsService.getRedemptionById(id);
+    if (redemption.memberId !== member.id) throw new ForbiddenException();
+    return redemption;
+  }
+
+  @Patch("me/push-token")
+  @ApiOperation({ summary: "Update Expo push token for current member" })
+  async updatePushToken(@Headers("authorization") auth: string, @Body() dto: UpdatePushTokenDto) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.updatePushToken(member.id, dto.expoPushToken);
   }
 
   private async extractMember(auth: string) {

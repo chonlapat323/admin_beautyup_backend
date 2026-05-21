@@ -1,11 +1,16 @@
 import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
 import { join } from "path";
 import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { RedemptionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { PushService } from "../notifications/push.service";
 
 @Injectable()
 export class RewardProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushService: PushService,
+  ) {}
 
   private get appUrl(): string {
     return process.env.APP_URL || `http://localhost:${process.env.PORT ?? 3000}`;
@@ -178,7 +183,11 @@ export class RewardProductsService {
     });
   }
 
-  async redeem(memberId: string, rewardProductId: string) {
+  async redeem(
+    memberId: string,
+    rewardProductId: string,
+    shipping: { recipient: string; phone: string; address: string },
+  ) {
     return this.prisma.$transaction(async (tx) => {
       // Re-read inside the transaction to prevent TOCTOU race condition:
       // concurrent redeems could both pass the checks outside and then double-decrement.
@@ -201,8 +210,65 @@ export class RewardProductsService {
         data: { stock: { decrement: 1 } },
       });
       return tx.rewardRedemption.create({
-        data: { memberId, rewardProductId, pointsSpent: product.pointCost },
+        data: {
+          memberId,
+          rewardProductId,
+          pointsSpent: product.pointCost,
+          shippingRecipient: shipping.recipient,
+          shippingPhone: shipping.phone,
+          shippingAddress: shipping.address,
+        },
       });
     });
+  }
+
+  async updateRedemptionStatus(
+    id: string,
+    status: RedemptionStatus,
+    trackingNumber?: string,
+  ) {
+    const redemption = await this.prisma.rewardRedemption.findUnique({
+      where: { id },
+      include: { member: { select: { expoPushToken: true } } },
+    });
+    if (!redemption) throw new NotFoundException("ไม่พบรายการแลกแต้ม");
+
+    const updated = await this.prisma.rewardRedemption.update({
+      where: { id },
+      data: {
+        status,
+        trackingNumber: trackingNumber ?? undefined,
+        statusUpdatedAt: new Date(),
+      },
+      include: {
+        member: true,
+        rewardProduct: true,
+      },
+    });
+
+    const token = redemption.member.expoPushToken;
+    if (token) {
+      const notifications: Record<RedemptionStatus, { title: string; body: string }> = {
+        PENDING: { title: "", body: "" },
+        PREPARING: { title: "กำลังเตรียมพัสดุ 📦", body: "ของรางวัลของคุณกำลังถูกเตรียม" },
+        SHIPPED: { title: "จัดส่งแล้ว 🚚", body: `หมายเลขพัสดุ: ${trackingNumber ?? ""}` },
+        DELIVERED: { title: "ส่งถึงแล้ว ✅", body: "ของรางวัลของคุณถึงปลายทางแล้ว" },
+      };
+      const notif = notifications[status];
+      if (notif.title) {
+        void this.pushService.send(token, notif.title, notif.body);
+      }
+    }
+
+    return updated;
+  }
+
+  async getRedemptionById(id: string) {
+    const redemption = await this.prisma.rewardRedemption.findUnique({
+      where: { id },
+      include: { member: true, rewardProduct: true },
+    });
+    if (!redemption) throw new NotFoundException("ไม่พบรายการแลกแต้ม");
+    return redemption;
   }
 }

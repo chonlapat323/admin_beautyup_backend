@@ -2,6 +2,7 @@ import { BadRequestException, NotFoundException } from "@nestjs/common";
 import { Test, TestingModule } from "@nestjs/testing";
 import { RewardProductsService } from "./reward-products.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { PushService } from "../notifications/push.service";
 
 jest.mock("fs", () => ({
   existsSync: jest.fn(),
@@ -48,6 +49,8 @@ const mockPrisma = {
   $transaction: jest.fn(),
 };
 
+const mockPushService = { send: jest.fn().mockResolvedValue(undefined) };
+
 describe("RewardProductsService", () => {
   let service: RewardProductsService;
 
@@ -56,6 +59,7 @@ describe("RewardProductsService", () => {
       providers: [
         RewardProductsService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: PushService, useValue: mockPushService },
       ],
     }).compile();
 
@@ -423,7 +427,7 @@ describe("RewardProductsService", () => {
 
     it("ควรแลกแต้มสำเร็จและ return redemption record", async () => {
       // Act
-      const result = await service.redeem("m1", "rp1");
+      const result = await service.redeem("m1", "rp1", { recipient: "Test", phone: "0801234567", address: "123 Test St" });
 
       // Assert
       expect(mockTx.member.update).toHaveBeenCalledWith(
@@ -440,7 +444,7 @@ describe("RewardProductsService", () => {
       mockTx.rewardProduct.findUnique.mockResolvedValue(null);
 
       // Assert
-      await expect(service.redeem("m1", "rp1")).rejects.toThrow(NotFoundException);
+      await expect(service.redeem("m1", "rp1", { recipient: "Test", phone: "0801234567", address: "123 Test St" })).rejects.toThrow(NotFoundException);
     });
 
     it("ควร throw NotFoundException เมื่อสินค้า isActive=false", async () => {
@@ -448,7 +452,7 @@ describe("RewardProductsService", () => {
       mockTx.rewardProduct.findUnique.mockResolvedValue({ ...mockProduct, isActive: false });
 
       // Assert
-      await expect(service.redeem("m1", "rp1")).rejects.toThrow(NotFoundException);
+      await expect(service.redeem("m1", "rp1", { recipient: "Test", phone: "0801234567", address: "123 Test St" })).rejects.toThrow(NotFoundException);
     });
 
     it("ควร throw BadRequestException เมื่อสินค้าหมด (stock=0)", async () => {
@@ -456,7 +460,7 @@ describe("RewardProductsService", () => {
       mockTx.rewardProduct.findUnique.mockResolvedValue({ ...mockProduct, stock: 0 });
 
       // Assert
-      await expect(service.redeem("m1", "rp1")).rejects.toThrow(BadRequestException);
+      await expect(service.redeem("m1", "rp1", { recipient: "Test", phone: "0801234567", address: "123 Test St" })).rejects.toThrow(BadRequestException);
     });
 
     it("ควร throw NotFoundException เมื่อไม่พบสมาชิก", async () => {
@@ -464,7 +468,7 @@ describe("RewardProductsService", () => {
       mockTx.member.findUnique.mockResolvedValue(null);
 
       // Assert
-      await expect(service.redeem("m1", "rp1")).rejects.toThrow(NotFoundException);
+      await expect(service.redeem("m1", "rp1", { recipient: "Test", phone: "0801234567", address: "123 Test St" })).rejects.toThrow(NotFoundException);
     });
 
     it("ควร throw BadRequestException เมื่อแต้มไม่พอ", async () => {
@@ -472,7 +476,7 @@ describe("RewardProductsService", () => {
       mockTx.member.findUnique.mockResolvedValue({ ...mockMember, pointBalance: 100 });
 
       // Assert
-      await expect(service.redeem("m1", "rp1")).rejects.toThrow(BadRequestException);
+      await expect(service.redeem("m1", "rp1", { recipient: "Test", phone: "0801234567", address: "123 Test St" })).rejects.toThrow(BadRequestException);
     });
   });
 });

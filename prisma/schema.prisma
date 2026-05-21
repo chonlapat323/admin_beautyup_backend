@@ -44,6 +44,13 @@ enum WithdrawalStatus {
   REJECTED
 }
 
+enum RedemptionStatus {
+  PENDING
+  PREPARING
+  SHIPPED
+  DELIVERED
+}
+
 model Banner {
   id          String   @id @default(cuid())
   eyebrow     String
@@ -144,6 +151,7 @@ model Member {
   withdrawalRequests   WithdrawalRequest[]
   sessions             MemberSession[]
   flowAccountContactId Int?
+  expoPushToken        String?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 }
@@ -381,13 +389,20 @@ model RewardProductImage {
 }
 
 model RewardRedemption {
-  id              String        @id @default(cuid())
-  memberId        String
-  member          Member        @relation("MemberRedemptions", fields: [memberId], references: [id])
-  rewardProductId String
-  rewardProduct   RewardProduct @relation(fields: [rewardProductId], references: [id])
-  pointsSpent     Int
-  createdAt       DateTime      @default(now())
+  id                String           @id @default(cuid())
+  memberId          String
+  member            Member           @relation("MemberRedemptions", fields: [memberId], references: [id])
+  rewardProductId   String
+  rewardProduct     RewardProduct    @relation(fields: [rewardProductId], references: [id])
+  pointsSpent       Int
+  status            RedemptionStatus @default(PENDING)
+  trackingNumber    String?
+  shippingRecipient String?
+  shippingPhone     String?
+  shippingAddress   String?
+  statusUpdatedAt   DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 }
 
 model CommissionPayout {
