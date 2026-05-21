@@ -402,7 +402,7 @@ model RewardRedemption {
   shippingAddress   String?
   statusUpdatedAt   DateTime?
   createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
+  updatedAt         DateTime         @default(now()) @updatedAt
 }
 
 model CommissionPayout {
