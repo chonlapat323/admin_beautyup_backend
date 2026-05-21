@@ -53,7 +53,7 @@ describe("PaymentsService", () => {
       expect(result).toEqual([]);
     });
 
-    it("ควรส่ง where filter ที่ถูกต้องไปยัง Prisma", async () => {
+    it("ควรส่ง where filter ที่ถูกต้องไปยัง Prisma (ไม่รวม CANCELLED และ null paymentMethod)", async () => {
       // Arrange
       mockPrisma.order.findMany.mockResolvedValue([]);
 
@@ -70,18 +70,66 @@ describe("PaymentsService", () => {
         }),
       );
     });
+
+    it("ควรแปลง totalAmount จาก string เป็น number ด้วย Number()", async () => {
+      // Arrange
+      mockPrisma.order.findMany.mockResolvedValue([
+        { paymentMethod: "PROMPTPAY", totalAmount: "1234.56" },
+      ]);
+
+      // Act
+      const result = await service.findAll();
+
+      // Assert
+      expect(typeof result[0].amount).toBe("number");
+      expect(result[0].amount).toBe(1234.56);
+    });
+
+    it("ควรกำหนด status เป็น PAID ให้ทุก record", async () => {
+      // Arrange
+      mockPrisma.order.findMany.mockResolvedValue([
+        { paymentMethod: "BANK_TRANSFER", totalAmount: "100" },
+        { paymentMethod: "CREDIT_CARD", totalAmount: "200" },
+      ]);
+
+      // Act
+      const result = await service.findAll();
+
+      // Assert
+      result.forEach((r) => expect(r.status).toBe("PAID"));
+    });
   });
 
   // ─── retry ─────────────────────────────────────────────────────────────────
 
   describe("retry", () => {
-    it("ควร return message พร้อม orderId", () => {
+    it("ควร return message พร้อม orderId ที่ส่งเข้ามา", () => {
       // Act
       const result = service.retry("o1");
 
       // Assert
       expect(result.orderId).toBe("o1");
       expect(result.message).toBeDefined();
+    });
+
+    it("ควร return orderId ตรงกับที่ส่งเข้ามาในทุก case", () => {
+      // Arrange
+      const orderId = "order-xyz-999";
+
+      // Act
+      const result = service.retry(orderId);
+
+      // Assert
+      expect(result.orderId).toBe(orderId);
+    });
+
+    it("ควร return object ที่มี key message และ orderId", () => {
+      // Act
+      const result = service.retry("any-id");
+
+      // Assert
+      expect(result).toHaveProperty("message");
+      expect(result).toHaveProperty("orderId");
     });
   });
 });
