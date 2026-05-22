@@ -173,8 +173,15 @@ export class CommissionService {
     return { count: commissions.length, payouts };
   }
 
-  async findPayouts(params: { memberId?: string; page: number; pageSize: number }) {
-    const where = params.memberId ? { memberId: params.memberId } : {};
+  async findPayouts(params: { memberId?: string; from?: string; to?: string; page: number; pageSize: number }) {
+    const where: Record<string, unknown> = {};
+    if (params.memberId) where.memberId = params.memberId;
+    if (params.from || params.to) {
+      where.createdAt = {
+        ...(params.from ? { gte: new Date(params.from) } : {}),
+        ...(params.to ? { lte: new Date(new Date(params.to).setHours(23, 59, 59, 999)) } : {}),
+      };
+    }
     const [items, totalItems] = await this.prisma.$transaction([
       this.prisma.commissionPayout.findMany({
         where,

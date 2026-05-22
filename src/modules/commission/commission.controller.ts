@@ -101,6 +101,16 @@ class ListPayoutsQueryDto {
   @Type(() => Number)
   @IsInt()
   pageSize?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  from?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  to?: string;
 }
 
 @ApiTags("Commission")
@@ -165,6 +175,8 @@ export class CommissionController {
   findPayouts(@Query() query: ListPayoutsQueryDto) {
     return this.commissionService.findPayouts({
       memberId: query.memberId,
+      from: query.from,
+      to: query.to,
       page: query.page && query.page > 0 ? query.page : 1,
       pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 20,
     });
