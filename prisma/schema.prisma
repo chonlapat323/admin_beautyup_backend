@@ -168,6 +168,7 @@ model MemberAddress {
   addressLine1 String
   addressLine2 String?
   district     String?
+  subdistrict  String?
   province     String?
   postalCode   String?
   isDefault    Boolean  @default(false)

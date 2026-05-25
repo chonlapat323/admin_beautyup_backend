@@ -73,6 +73,11 @@ class CreateAddressDto {
   @IsString()
   district?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  subdistrict?: string;
+
   @ApiPropertyOptional({ example: "กรุงเทพมหานคร" })
   @IsOptional()
   @IsString()
@@ -96,6 +101,7 @@ class UpdateAddressDto {
   @ApiPropertyOptional() @IsOptional() @IsString() addressLine1?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() addressLine2?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() district?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() subdistrict?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() province?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() postalCode?: string;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isDefault?: boolean;
