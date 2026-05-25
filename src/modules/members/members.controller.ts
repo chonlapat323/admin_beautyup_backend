@@ -25,10 +25,10 @@ class CreateMemberDto {
   @IsString()
   referredById?: string;
 
-  @ApiPropertyOptional({ enum: ["REGULAR", "SALON"], example: "REGULAR" })
+  @ApiPropertyOptional({ enum: ["REGULAR", "SALON", "SALES"], example: "REGULAR" })
   @IsOptional()
-  @IsEnum(["REGULAR", "SALON"])
-  memberType?: "REGULAR" | "SALON";
+  @IsEnum(["REGULAR", "SALON", "SALES"])
+  memberType?: "REGULAR" | "SALON" | "SALES";
 }
 
 class UpdateMemberDto {
@@ -37,10 +37,10 @@ class UpdateMemberDto {
   @IsString()
   fullName?: string;
 
-  @ApiPropertyOptional({ enum: ["REGULAR", "SALON"], example: "REGULAR" })
+  @ApiPropertyOptional({ enum: ["REGULAR", "SALON", "SALES"], example: "REGULAR" })
   @IsOptional()
-  @IsEnum(["REGULAR", "SALON"])
-  memberType?: "REGULAR" | "SALON";
+  @IsEnum(["REGULAR", "SALON", "SALES"])
+  memberType?: "REGULAR" | "SALON" | "SALES";
 
   @ApiPropertyOptional() @IsOptional() @IsString() adminEmail?: string;
 }

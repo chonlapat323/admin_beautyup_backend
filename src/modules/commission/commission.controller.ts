@@ -53,6 +53,13 @@ class UpdateRatesDto {
   @Max(100)
   @Type(() => Number)
   regular!: number;
+
+  @ApiProperty({ example: 3 })
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  @Type(() => Number)
+  sales!: number;
 }
 
 class MarkPaidDto {
@@ -138,7 +145,7 @@ export class CommissionController {
   @Put("settings")
   @ApiOperation({ summary: "Update commission rate settings" })
   updateSettings(@Body() dto: UpdateRatesDto) {
-    return this.commissionService.updateRates(dto.salon, dto.regular);
+    return this.commissionService.updateRates(dto.salon, dto.regular, dto.sales);
   }
 
   @Get()

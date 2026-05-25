@@ -24,6 +24,7 @@ enum OrderStatus {
 enum MemberType {
   REGULAR
   SALON
+  SALES
 }
 
 enum CommissionStatus {

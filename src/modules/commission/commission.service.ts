@@ -2,8 +2,8 @@ import { Injectable, Logger } from "@nestjs/common";
 import { CommissionStatus, CreditTransactionType } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
-const DEFAULT_RATES = { SALON: 10, REGULAR: 5 };
-const RATE_KEY = { SALON: "commission.rate.SALON", REGULAR: "commission.rate.REGULAR" };
+const DEFAULT_RATES = { SALON: 10, REGULAR: 5, SALES: 3 };
+const RATE_KEY = { SALON: "commission.rate.SALON", REGULAR: "commission.rate.REGULAR", SALES: "commission.rate.SALES" };
 
 @Injectable()
 export class CommissionService {
@@ -11,18 +11,19 @@ export class CommissionService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async getRates(): Promise<{ salon: number; regular: number }> {
+  async getRates(): Promise<{ salon: number; regular: number; sales: number }> {
     const rows = await this.prisma.setting.findMany({
-      where: { key: { in: [RATE_KEY.SALON, RATE_KEY.REGULAR] } },
+      where: { key: { in: [RATE_KEY.SALON, RATE_KEY.REGULAR, RATE_KEY.SALES] } },
     });
     const map = Object.fromEntries(rows.map((r) => [r.key, Number(r.value)]));
     return {
       salon: map[RATE_KEY.SALON] ?? DEFAULT_RATES.SALON,
       regular: map[RATE_KEY.REGULAR] ?? DEFAULT_RATES.REGULAR,
+      sales: map[RATE_KEY.SALES] ?? DEFAULT_RATES.SALES,
     };
   }
 
-  async updateRates(salon: number, regular: number) {
+  async updateRates(salon: number, regular: number, sales: number) {
     await this.prisma.$transaction([
       this.prisma.setting.upsert({
         where: { key: RATE_KEY.SALON },
@@ -34,8 +35,13 @@ export class CommissionService {
         create: { key: RATE_KEY.REGULAR, value: String(regular) },
         update: { value: String(regular) },
       }),
+      this.prisma.setting.upsert({
+        where: { key: RATE_KEY.SALES },
+        create: { key: RATE_KEY.SALES, value: String(sales) },
+        update: { value: String(sales) },
+      }),
     ]);
-    return { salon, regular };
+    return { salon, regular, sales };
   }
 
   async createForOrder(orderId: string) {
@@ -55,7 +61,12 @@ export class CommissionService {
 
     const referrer = order.member.referredBy;
     const rates = await this.getRates();
-    const rate = referrer.memberType === "SALON" ? rates.salon : rates.regular;
+    const rate =
+      referrer.memberType === "SALON"
+        ? rates.salon
+        : referrer.memberType === "SALES"
+          ? rates.sales
+          : rates.regular;
     const amount = (Number(order.totalAmount) * rate) / 100;
 
     this.logger.log(`[createForOrder] referrerId=${referrer.id} memberType=${referrer.memberType} rate=${rate}% totalAmount=${order.totalAmount} amount=${Math.round(amount * 100) / 100}`);
