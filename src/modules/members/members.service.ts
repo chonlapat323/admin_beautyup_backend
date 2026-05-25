@@ -129,7 +129,7 @@ export class MembersService {
 
   async update(
     id: string,
-    payload: { fullName?: string; memberType?: "REGULAR" | "SALON" },
+    payload: { fullName?: string; memberType?: "REGULAR" | "SALON" | "SALES" },
     adminEmail = "system",
   ) {
     await this.findOne(id);
