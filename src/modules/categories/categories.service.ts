@@ -168,13 +168,15 @@ export class CategoriesService {
   ) {
     const existing = await this.findOne(id);
 
-    let imageUrl = payload.imageUrl;
+    let imageUrl: string | undefined = undefined;
     if (payload.tempImageFile) {
       const moved = this.moveTempToCategory(payload.tempImageFile);
       if (moved) {
         if (existing.imageUrl) this.deleteCategoryImageFile(existing.imageUrl);
         imageUrl = moved;
       }
+    } else if (typeof payload.imageUrl === "string" && payload.imageUrl.length > 0) {
+      imageUrl = payload.imageUrl;
     }
 
     return this.prisma.category.update({
