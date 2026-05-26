@@ -84,6 +84,11 @@ export class MembersService {
     phone?: string;
     email?: string;
     referredById?: string;
+    memberType?: "REGULAR" | "SALON" | "SALES";
+    facebook?: string;
+    tiktok?: string;
+    shopee?: string;
+    lazada?: string;
   }) {
     let member;
     try {
@@ -129,7 +134,14 @@ export class MembersService {
 
   async update(
     id: string,
-    payload: { fullName?: string; memberType?: "REGULAR" | "SALON" | "SALES" },
+    payload: {
+      fullName?: string;
+      memberType?: "REGULAR" | "SALON" | "SALES";
+      facebook?: string;
+      tiktok?: string;
+      shopee?: string;
+      lazada?: string;
+    },
     adminEmail = "system",
   ) {
     await this.findOne(id);
@@ -253,6 +265,20 @@ export class MembersService {
       where: { memberId },
       orderBy: { createdAt: "desc" },
       take: 100,
+    });
+  }
+
+  async getMemberOrders(memberId: string) {
+    return this.prisma.order.findMany({
+      where: { memberId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        totalAmount: true,
+        createdAt: true,
+      },
     });
   }
 

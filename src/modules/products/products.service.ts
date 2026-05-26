@@ -68,6 +68,31 @@ export class ProductsService {
     }
   }
 
+  async generateSku(brandId?: string, categoryId?: string, collectionId?: string): Promise<string> {
+    function abbr(name: string, len: number): string {
+      return name.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, len);
+    }
+
+    const parts: string[] = [];
+    if (brandId) {
+      const brand = await this.prisma.brand.findUnique({ where: { id: brandId } });
+      if (brand) parts.push(abbr(brand.name, 2));
+    }
+    if (categoryId) {
+      const cat = await this.prisma.category.findUnique({ where: { id: categoryId } });
+      if (cat) parts.push(abbr(cat.name, 3));
+    }
+    if (collectionId) {
+      const col = await this.prisma.collection.findUnique({ where: { id: collectionId } });
+      if (col) parts.push(abbr(col.name, 3));
+    }
+
+    const prefix = parts.join("") || "PRD";
+    const count = await this.prisma.product.count({ where: { sku: { startsWith: prefix } } });
+    const seq = String(count + 1).padStart(5, "0");
+    return `${prefix}${seq}`;
+  }
+
   async findAll(params: ProductListParams) {
     const where: Prisma.ProductWhereInput = {};
 

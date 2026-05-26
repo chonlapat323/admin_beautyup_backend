@@ -29,6 +29,11 @@ class CreateMemberDto {
   @IsOptional()
   @IsEnum(["REGULAR", "SALON", "SALES"])
   memberType?: "REGULAR" | "SALON" | "SALES";
+
+  @ApiPropertyOptional() @IsOptional() @IsString() facebook?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tiktok?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() shopee?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() lazada?: string;
 }
 
 class UpdateMemberDto {
@@ -41,6 +46,11 @@ class UpdateMemberDto {
   @IsOptional()
   @IsEnum(["REGULAR", "SALON", "SALES"])
   memberType?: "REGULAR" | "SALON" | "SALES";
+
+  @ApiPropertyOptional() @IsOptional() @IsString() facebook?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tiktok?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() shopee?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() lazada?: string;
 
   @ApiPropertyOptional() @IsOptional() @IsString() adminEmail?: string;
 }
@@ -222,5 +232,11 @@ export class MembersController {
   @ApiOperation({ summary: "Get credit transaction history for member" })
   getCreditTransactions(@Param("id") id: string) {
     return this.membersService.getCreditTransactions(id);
+  }
+
+  @Get(":id/orders")
+  @ApiOperation({ summary: "Get orders for member" })
+  getMemberOrders(@Param("id") id: string) {
+    return this.membersService.getMemberOrders(id);
   }
 }

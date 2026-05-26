@@ -153,6 +153,10 @@ model Member {
   sessions             MemberSession[]
   flowAccountContactId Int?
   expoPushToken        String?
+  facebook             String?
+  tiktok               String?
+  shopee               String?
+  lazada               String?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
 }
@@ -398,8 +402,10 @@ model Commission {
 }
 
 model RewardProduct {
-  id          String               @id @default(cuid())
-  name        String
+  id                String               @id @default(cuid())
+  sku               String?              @unique
+  flowAccountItemId String?
+  name              String
   description String?
   imageUrl    String?
   pointCost   Int

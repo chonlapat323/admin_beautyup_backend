@@ -320,6 +320,16 @@ export class ProductsController {
     });
   }
 
+  @Get("generate-sku")
+  @ApiOperation({ summary: "Generate SKU suggestion" })
+  generateSku(
+    @Query("brandId") brandId?: string,
+    @Query("categoryId") categoryId?: string,
+    @Query("collectionId") collectionId?: string,
+  ) {
+    return this.productsService.generateSku(brandId, categoryId, collectionId);
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get product detail" })
   findOne(@Param("id") id: string) {

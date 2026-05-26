@@ -1,15 +1,19 @@
 import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
 import { join } from "path";
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException, BadRequestException } from "@nestjs/common";
 import { RedemptionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PushService } from "../notifications/push.service";
+import { FlowAccountService } from "../flowaccount/flowaccount.service";
 
 @Injectable()
 export class RewardProductsService {
+  private readonly logger = new Logger(RewardProductsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly pushService: PushService,
+    private readonly flowAccountService: FlowAccountService,
   ) {}
 
   private get appUrl(): string {
@@ -85,6 +89,12 @@ export class RewardProductsService {
 
   private readonly IMAGE_INCLUDE = { images: { orderBy: { sortOrder: "asc" as const } } };
 
+  async generateSku(): Promise<string> {
+    const count = await this.prisma.rewardProduct.count();
+    const seq = String(count + 1).padStart(3, "0");
+    return `PNT-${seq}`;
+  }
+
   findAll() {
     return this.prisma.rewardProduct.findMany({
       orderBy: { createdAt: "desc" },
@@ -119,7 +129,26 @@ export class RewardProductsService {
       );
     }
 
-    return this.findOne(product.id);
+    const created = await this.findOne(product.id);
+
+    // Sync to FlowAccount in background with price 0 — failure does not block create
+    this.flowAccountService.createItem({
+      sku: created.sku ?? created.id,
+      name: created.name,
+      price: 0,
+      stock: created.stock,
+    }).then(async (itemId) => {
+      if (!itemId) return;
+      this.logger.log(`FlowAccount item created: ${itemId} for reward product ${created.id}`);
+      await this.prisma.rewardProduct.update({
+        where: { id: created.id },
+        data: { flowAccountItemId: itemId },
+      });
+    }).catch((err) => {
+      this.logger.error(`FlowAccount item sync failed for reward product ${created.id}`, err);
+    });
+
+    return created;
   }
 
   async update(
@@ -144,7 +173,19 @@ export class RewardProductsService {
       await this.applyOrderedImages(id, orderedImages);
     }
 
-    return this.findOne(id);
+    const updated = await this.findOne(id);
+
+    if (updated.flowAccountItemId) {
+      this.flowAccountService.updateItem(updated.flowAccountItemId, {
+        sku: updated.sku ?? updated.id,
+        name: updated.name,
+        price: 0,
+      }).catch((err) => {
+        this.logger.error(`FlowAccount item update failed for reward product ${updated.id}`, err);
+      });
+    }
+
+    return updated;
   }
 
   async remove(id: string) {

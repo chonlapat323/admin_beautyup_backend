@@ -63,6 +63,12 @@ export class RewardProductsController {
     return this.service.updateRedemptionStatus(id, dto.status, dto.trackingNumber);
   }
 
+  @Get("generate-sku")
+  @ApiOperation({ summary: "Generate reward product SKU" })
+  generateSku() {
+    return this.service.generateSku();
+  }
+
   @Get(":id")
   @ApiOperation({ summary: "Get one reward product" })
   findOne(@Param("id") id: string) {
