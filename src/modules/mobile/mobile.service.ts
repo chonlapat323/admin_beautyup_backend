@@ -24,11 +24,14 @@ function generateOrderNumber(): string {
 }
 
 async function makeReferralCode(prisma: PrismaService): Promise<string> {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    let code = "BU-";
-    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    const d1 = String(Math.floor(Math.random() * 10));
+    const d2 = String(Math.floor(Math.random() * 10));
+    const l1 = letters[Math.floor(Math.random() * 26)];
+    const l2 = letters[Math.floor(Math.random() * 26)];
+    const code = `${d1}${d2}${l1}${l2}`;
     const existing = await prisma.member.findFirst({ where: { referralCode: code } });
     if (!existing) return code;
   }
