@@ -178,6 +178,8 @@ model MemberAddress {
 
 model Category {
   id                     String       @id @default(cuid())
+  brandId                String?
+  brand                  Brand?       @relation(fields: [brandId], references: [id])
   name                   String
   slug                   String       @unique
   eyebrow                String?
@@ -189,6 +191,7 @@ model Category {
   processedBy            String?      @map("processed_by")
   processedAt            DateTime?    @map("processed_at")
   deletedAt              DateTime?
+  collections            Collection[]
   products               Product[]
   shadeGroups            ShadeGroup[]
   createdAt              DateTime     @default(now())
@@ -222,25 +225,28 @@ model Shade {
 }
 
 model Brand {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  isActive  Boolean   @default(true)
-  sortOrder Int       @default(0)
-  products  Product[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String       @id @default(cuid())
+  name       String       @unique
+  slug       String       @unique
+  isActive   Boolean      @default(true)
+  sortOrder  Int          @default(0)
+  categories Category[]
+  products   Product[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 }
 
 model Collection {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  isActive  Boolean   @default(true)
-  sortOrder Int       @default(0)
-  products  Product[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  name       String
+  slug       String    @unique
+  isActive   Boolean   @default(true)
+  sortOrder  Int       @default(0)
+  products   Product[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Product {
