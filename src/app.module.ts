@@ -4,6 +4,8 @@ import { ConfigModule } from "@nestjs/config";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { AuditLogModule } from "./modules/audit-log/audit-log.module";
+import { BrandsModule } from "./modules/brands/brands.module";
+import { CollectionsModule } from "./modules/collections/collections.module";
 import { AdminUsersModule } from "./modules/admin-users/admin-users.module";
 import { BannersModule } from "./modules/banners/banners.module";
 import { AuthModule } from "./modules/auth/auth.module";
@@ -62,6 +64,8 @@ import { CreditTransactionsModule } from "./modules/credit-transactions/credit-t
     SalonCodesModule,
     RewardProductsModule,
     CreditTransactionsModule,
+    BrandsModule,
+    CollectionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

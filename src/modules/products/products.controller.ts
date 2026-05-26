@@ -104,7 +104,22 @@ class CreateProductDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  shadeId?: string;
+  brandId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  collectionId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  colorCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  colorName?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -174,7 +189,22 @@ class UpdateProductDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  shadeId?: string | null;
+  brandId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  collectionId?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  colorCode?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  colorName?: string | null;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -212,7 +242,12 @@ class ListProductsQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  shadeId?: string;
+  brandId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  collectionId?: string;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -268,7 +303,8 @@ export class ProductsController {
       search: query.search?.trim() || undefined,
       status: (query.status as "all" | "active" | "inactive" | "draft") || "all",
       categoryId: query.categoryId || undefined,
-      shadeId: query.shadeId || undefined,
+      brandId: query.brandId || undefined,
+      collectionId: query.collectionId || undefined,
       isFeatured: query.isFeatured === true ? true : undefined,
       page: query.page && query.page > 0 ? query.page : 1,
       pageSize: query.pageSize && query.pageSize > 0 ? query.pageSize : 10,

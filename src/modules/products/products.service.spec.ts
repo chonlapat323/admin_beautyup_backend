@@ -169,16 +169,28 @@ describe("ProductsService", () => {
       expect(where.categoryId).toBe("c1");
     });
 
-    it("ควรส่ง shadeId filter เมื่อระบุ", async () => {
+    it("ควรส่ง brandId filter เมื่อระบุ", async () => {
       // Arrange
       mockPrisma.$transaction.mockResolvedValue([[], 0]);
 
       // Act
-      await service.findAll({ shadeId: "s1", page: 1, pageSize: 10 });
+      await service.findAll({ brandId: "b1", page: 1, pageSize: 10 });
 
       // Assert
       const where = mockPrisma.product.findMany.mock.calls[0][0].where;
-      expect(where.shadeId).toBe("s1");
+      expect(where.brandId).toBe("b1");
+    });
+
+    it("ควรส่ง collectionId filter เมื่อระบุ", async () => {
+      // Arrange
+      mockPrisma.$transaction.mockResolvedValue([[], 0]);
+
+      // Act
+      await service.findAll({ collectionId: "col1", page: 1, pageSize: 10 });
+
+      // Assert
+      const where = mockPrisma.product.findMany.mock.calls[0][0].where;
+      expect(where.collectionId).toBe("col1");
     });
 
     it("ควรส่ง isFeatured=true filter เมื่อระบุ", async () => {

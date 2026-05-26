@@ -9,7 +9,8 @@ type ProductListParams = {
   search?: string;
   status?: "all" | "active" | "inactive" | "draft";
   categoryId?: string;
-  shadeId?: string;
+  brandId?: string;
+  collectionId?: string;
   isFeatured?: boolean;
   page: number;
   pageSize: number;
@@ -82,7 +83,8 @@ export class ProductsService {
     else if (params.status === "draft") where.status = ProductStatus.DRAFT;
 
     if (params.categoryId) where.categoryId = params.categoryId;
-    if (params.shadeId) where.shadeId = params.shadeId;
+    if (params.brandId) where.brandId = params.brandId;
+    if (params.collectionId) where.collectionId = params.collectionId;
     if (params.isFeatured === true) where.isFeatured = true;
 
     const [items, totalItems] = await this.prisma.$transaction([
@@ -93,7 +95,8 @@ export class ProductsService {
         take: params.pageSize,
         include: {
           category: { select: { id: true, name: true } },
-          shade: { select: { id: true, name: true } },
+          brand: { select: { id: true, name: true } },
+          collection: { select: { id: true, name: true } },
           images: { orderBy: { sortOrder: "asc" } },
         },
       }),
@@ -123,7 +126,10 @@ export class ProductsService {
     price: number;
     specialPrice?: number;
     categoryId: string;
-    shadeId?: string;
+    brandId?: string;
+    collectionId?: string;
+    colorCode?: string;
+    colorName?: string;
     stock?: number;
     status?: ProductStatus;
     isFeatured?: boolean;
@@ -143,7 +149,10 @@ export class ProductsService {
         price: payload.price,
         specialPrice: payload.specialPrice ?? null,
         categoryId: payload.categoryId,
-        shadeId: payload.shadeId ?? null,
+        brandId: payload.brandId ?? null,
+        collectionId: payload.collectionId ?? null,
+        colorCode: payload.colorCode ?? null,
+        colorName: payload.colorName ?? null,
         stock,
         reserveStock,
         sellableStock,
@@ -191,7 +200,8 @@ export class ProductsService {
       where: { id },
       include: {
         category: { select: { id: true, name: true } },
-        shade: { select: { id: true, name: true, shadeGroupId: true } },
+        brand: { select: { id: true, name: true } },
+        collection: { select: { id: true, name: true } },
         ...IMAGE_INCLUDE,
       },
     });
@@ -210,7 +220,10 @@ export class ProductsService {
       price?: number;
       specialPrice?: number | null;
       categoryId?: string;
-      shadeId?: string | null;
+      brandId?: string | null;
+      collectionId?: string | null;
+      colorCode?: string | null;
+      colorName?: string | null;
       stock?: number;
       status?: ProductStatus;
       isFeatured?: boolean;
@@ -239,7 +252,10 @@ export class ProductsService {
         price: payload.price,
         specialPrice: payload.specialPrice,
         categoryId: payload.categoryId,
-        shadeId: payload.shadeId,
+        brandId: payload.brandId,
+        collectionId: payload.collectionId,
+        colorCode: payload.colorCode,
+        colorName: payload.colorName,
         status: payload.status,
         isFeatured: payload.isFeatured,
         tag: payload.tag,
