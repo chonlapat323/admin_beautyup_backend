@@ -1,9 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
-import { AdminGuard } from "../auth/admin.guard";
+import { Body, Controller, Delete, Get, Param, Patch, Post } from "@nestjs/common";
 import { CollectionsService } from "./collections.service";
 
 @Controller("collections")
-@UseGuards(AdminGuard)
 export class CollectionsController {
   constructor(private readonly collectionsService: CollectionsService) {}
 
