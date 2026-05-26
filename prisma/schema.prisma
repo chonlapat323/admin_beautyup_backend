@@ -153,6 +153,8 @@ model Member {
   sessions             MemberSession[]
   flowAccountContactId Int?
   expoPushToken        String?
+  profileImageUrl      String?
+  bannerImageUrl       String?
   facebook             String?
   tiktok               String?
   shopee               String?

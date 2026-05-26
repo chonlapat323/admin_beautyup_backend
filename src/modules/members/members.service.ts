@@ -1,3 +1,5 @@
+import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
+import { join } from "path";
 import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AuditLogService } from "../audit-log/audit-log.service";
@@ -20,6 +22,40 @@ export class MembersService {
     private readonly flowAccount: FlowAccountService,
     private readonly auditLog: AuditLogService,
   ) {}
+
+  private get appUrl(): string {
+    return process.env.APP_URL || `http://localhost:${process.env.PORT ?? 3000}`;
+  }
+
+  private get memberDir(): string {
+    return join(process.cwd(), "uploads", "members");
+  }
+
+  private get tempDir(): string {
+    return join(process.cwd(), "uploads", "temp");
+  }
+
+  private ensureMemberDir(): void {
+    if (!existsSync(this.memberDir)) mkdirSync(this.memberDir, { recursive: true });
+  }
+
+  private moveTempToMember(filename: string): string | null {
+    this.ensureMemberDir();
+    const src = join(this.tempDir, filename);
+    const dest = join(this.memberDir, filename);
+    if (!existsSync(src)) return null;
+    renameSync(src, dest);
+    return `${this.appUrl}/uploads/members/${filename}`;
+  }
+
+  private deleteMemberImageFile(url: string): void {
+    try {
+      const filename = url.split("/").pop();
+      if (!filename) return;
+      const filePath = join(this.memberDir, filename);
+      if (existsSync(filePath)) unlinkSync(filePath);
+    } catch { /* ignore */ }
+  }
 
   private syncDefaultAddressToFlowAccount(memberId: string, address: {
     addressLine1: string;
@@ -141,14 +177,29 @@ export class MembersService {
       tiktok?: string;
       shopee?: string;
       lazada?: string;
+      tempProfileImageFile?: string;
+      tempBannerImageFile?: string;
     },
     adminEmail = "system",
   ) {
-    await this.findOne(id);
+    const member = await this.findOne(id);
+    const { tempProfileImageFile, tempBannerImageFile, ...updateData } = payload;
+
+    if (tempProfileImageFile) {
+      if (member.profileImageUrl) this.deleteMemberImageFile(member.profileImageUrl);
+      const url = this.moveTempToMember(tempProfileImageFile);
+      if (url) (updateData as Record<string, unknown>).profileImageUrl = url;
+    }
+    if (tempBannerImageFile) {
+      if (member.bannerImageUrl) this.deleteMemberImageFile(member.bannerImageUrl);
+      const url = this.moveTempToMember(tempBannerImageFile);
+      if (url) (updateData as Record<string, unknown>).bannerImageUrl = url;
+    }
+
     try {
       const result = await this.prisma.member.update({
         where: { id },
-        data: payload,
+        data: updateData,
         include: {
           _count: { select: { orders: true, referrals: true } },
           referredBy: { select: { id: true, fullName: true } },

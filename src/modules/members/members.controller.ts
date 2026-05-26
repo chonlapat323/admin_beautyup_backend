@@ -52,6 +52,9 @@ class UpdateMemberDto {
   @ApiPropertyOptional() @IsOptional() @IsString() shopee?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() lazada?: string;
 
+  @ApiPropertyOptional() @IsOptional() @IsString() tempProfileImageFile?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() tempBannerImageFile?: string;
+
   @ApiPropertyOptional() @IsOptional() @IsString() adminEmail?: string;
 }
 
