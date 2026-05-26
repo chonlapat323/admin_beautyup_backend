@@ -257,14 +257,14 @@ model Product {
   status        ProductStatus  @default(DRAFT)
   isFeatured    Boolean        @default(false)
   tag           String?
-  brandId      String?
-  brand        Brand?      @relation(fields: [brandId], references: [id])
-  collectionId String?
-  collection   Collection? @relation(fields: [collectionId], references: [id])
-  colorCode    String?
-  colorName    String?
+  brandId       String?
+  brand         Brand?         @relation(fields: [brandId], references: [id])
   categoryId    String
   category      Category       @relation(fields: [categoryId], references: [id])
+  collectionId  String?
+  collection    Collection?    @relation(fields: [collectionId], references: [id])
+  colorCode     String?
+  colorName     String?
   storeId           String?
   store             Store?         @relation(fields: [storeId], references: [id])
   flowAccountItemId String?
