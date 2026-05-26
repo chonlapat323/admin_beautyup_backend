@@ -1159,6 +1159,8 @@ export class MobileService {
       bankName: (member.bankName as string | null) ?? null,
       bankAccountNumber: (member.bankAccountNumber as string | null) ?? null,
       bankAccountName: (member.bankAccountName as string | null) ?? null,
+      profileImageUrl: (member.profileImageUrl as string | null) ?? null,
+      bannerImageUrl: (member.bannerImageUrl as string | null) ?? null,
     };
   }
 }
