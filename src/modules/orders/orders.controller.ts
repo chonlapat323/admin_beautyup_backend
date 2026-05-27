@@ -49,7 +49,7 @@ export class OrdersController {
 
   @Patch(":id/tracking")
   @ApiOperation({ summary: "Update tracking number" })
-  updateTracking(@Param("id") id: string, @Body() dto: { trackingNumber: string }) {
-    return this.ordersService.updateTracking(id, dto.trackingNumber ?? "");
+  updateTracking(@Param("id") id: string, @Body() dto: { trackingNumber: string; changedByName?: string }) {
+    return this.ordersService.updateTracking(id, dto.trackingNumber ?? "", dto.changedByName ?? "Admin");
   }
 }

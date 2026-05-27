@@ -18,7 +18,7 @@ export class OrdersService {
   async findAll() {
     return this.prisma.order.findMany({
       include: {
-        member: { select: { fullName: true, email: true, phone: true } },
+        member: { select: { fullName: true, email: true, phone: true, storeName: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 200,
@@ -29,7 +29,7 @@ export class OrdersService {
     return this.prisma.order.findUnique({
       where: { id },
       include: {
-        member: { select: { fullName: true, email: true, phone: true } },
+        member: { select: { fullName: true, email: true, phone: true, storeName: true } },
         items: {
           include: {
             product: {
@@ -105,10 +105,37 @@ export class OrdersService {
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
 
-  async updateTracking(id: string, trackingNumber: string) {
-    const order = await this.prisma.order.findUnique({ where: { id }, select: { id: true } });
+  async updateTracking(id: string, trackingNumber: string, changedByName = "Admin") {
+    const order = await this.prisma.order.findUnique({ where: { id }, select: { id: true, status: true } });
     if (!order) throw new Error("Order not found");
-    await this.prisma.order.update({ where: { id }, data: { trackingNumber } });
-    return { message: "Tracking number updated.", id, trackingNumber };
+
+    const shouldShip = trackingNumber.trim() !== "" && order.status !== "SHIPPED";
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.order.update({
+        where: { id },
+        data: {
+          trackingNumber,
+          ...(shouldShip ? { status: "SHIPPED" as never } : {}),
+        },
+      });
+      if (shouldShip) {
+        await tx.orderStatusLog.create({
+          data: {
+            orderId: id,
+            fromStatus: order.status,
+            toStatus: "SHIPPED" as never,
+            changedByName,
+          },
+        });
+      }
+    });
+
+    return {
+      message: "Tracking number updated.",
+      id,
+      trackingNumber,
+      ...(shouldShip ? { status: "SHIPPED" } : {}),
+    };
   }
 }
