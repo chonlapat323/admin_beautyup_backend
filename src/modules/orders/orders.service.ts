@@ -18,7 +18,7 @@ export class OrdersService {
   async findAll() {
     return this.prisma.order.findMany({
       include: {
-        member: { select: { fullName: true, email: true, phone: true, storeName: true } },
+        member: { select: { fullName: true, email: true, phone: true } },
       },
       orderBy: { createdAt: "desc" },
       take: 200,
@@ -29,7 +29,7 @@ export class OrdersService {
     return this.prisma.order.findUnique({
       where: { id },
       include: {
-        member: { select: { fullName: true, email: true, phone: true, storeName: true } },
+        member: { select: { fullName: true, email: true, phone: true } },
         items: {
           include: {
             product: {
