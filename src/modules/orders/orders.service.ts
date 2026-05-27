@@ -1,4 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { Subject } from "rxjs";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { CommissionService } from "../commission/commission.service";
 import { PrismaService } from "../prisma/prisma.service";
@@ -7,6 +8,9 @@ import { StockService } from "../stock/stock.service";
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
+
+  private readonly orderEventSubject = new Subject<{ orderId: string; event: string }>();
+  readonly orderEvents$ = this.orderEventSubject.asObservable();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -102,6 +106,7 @@ export class OrdersService {
     }
 
     void this.auditLog.log({ adminEmail: changedByName, action: "order.status_change", entityType: "order", entityId: id, detail: JSON.stringify({ from: order.status, to: status }) });
+    this.orderEventSubject.next({ orderId: id, event: "status_change" });
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
 
@@ -131,6 +136,7 @@ export class OrdersService {
       }
     });
 
+    this.orderEventSubject.next({ orderId: id, event: "tracking_update" });
     return {
       message: "Tracking number updated.",
       id,
@@ -228,6 +234,7 @@ export class OrdersService {
       detail: JSON.stringify({ orderNumber, memberId: data.memberId }),
     });
 
+    this.orderEventSubject.next({ orderId: order.id, event: "new_order" });
     return { message: "Order created.", id: order.id, orderNumber: order.orderNumber };
   }
 }
