@@ -138,4 +138,96 @@ export class OrdersService {
       ...(shouldShip ? { status: "SHIPPED" } : {}),
     };
   }
+
+  async updateNote(id: string, note: string | null) {
+    const order = await this.prisma.order.findUnique({ where: { id }, select: { id: true } });
+    if (!order) throw new Error("Order not found");
+    await this.prisma.order.update({ where: { id }, data: { note: note ?? null } });
+    return { message: "Note updated.", id, note };
+  }
+
+  async adminCreate(data: {
+    memberId: string;
+    items: { productId: string; quantity: number }[];
+    shippingName: string;
+    shippingPhone: string;
+    shippingAddr: string;
+    note?: string;
+    adminEmail: string;
+  }) {
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: data.items.map((i) => i.productId) } },
+      select: { id: true, price: true, name: true, sku: true },
+    });
+
+    let subtotal = 0;
+    const orderItems = data.items.map((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) throw new Error(`Product ${item.productId} not found`);
+      const unitPrice = Number(product.price);
+      const totalPrice = unitPrice * item.quantity;
+      subtotal += totalPrice;
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice,
+        totalPrice,
+        name: product.name,
+        sku: product.sku,
+      };
+    });
+
+    const orderNumber = `ADM-${Date.now()}`;
+
+    const order = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({
+        data: {
+          orderNumber,
+          memberId: data.memberId,
+          status: "PROCESSING" as never,
+          subtotalAmount: subtotal,
+          shippingAmount: 0,
+          gatewayFee: 0,
+          discountAmount: subtotal,
+          totalAmount: 0,
+          pointEarned: 0,
+          paymentMethod: "MANUAL",
+          shippingName: data.shippingName,
+          shippingPhone: data.shippingPhone,
+          shippingAddr: data.shippingAddr,
+          note: data.note ?? null,
+          items: {
+            create: orderItems.map((item) => ({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.totalPrice,
+              name: item.name,
+              sku: item.sku,
+            })),
+          },
+        },
+      });
+      await tx.orderStatusLog.create({
+        data: {
+          orderId: created.id,
+          fromStatus: "PENDING" as never,
+          toStatus: "PROCESSING" as never,
+          changedByName: data.adminEmail,
+        },
+      });
+      await this.stockService.decrementForOrder(created.id, tx);
+      return created;
+    });
+
+    void this.auditLog.log({
+      adminEmail: data.adminEmail,
+      action: "order.admin_create",
+      entityType: "order",
+      entityId: order.id,
+      detail: JSON.stringify({ orderNumber, memberId: data.memberId }),
+    });
+
+    return { message: "Order created.", id: order.id, orderNumber: order.orderNumber };
+  }
 }
