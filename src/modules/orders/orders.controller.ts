@@ -1,8 +1,6 @@
-import { Body, Controller, Get, MessageEvent, Param, Patch, Post, Sse } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
 import { IsEnum, IsOptional, IsString } from "class-validator";
-import { Observable } from "rxjs";
-import { map } from "rxjs/operators";
 
 import { OrdersService } from "./orders.service";
 
@@ -30,14 +28,6 @@ class UpdateOrderStatusDto {
 @Controller("orders")
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
-
-  @Sse("events")
-  @ApiOperation({ summary: "SSE stream for real-time order updates" })
-  orderEvents(): Observable<MessageEvent> {
-    return this.ordersService.orderEvents$.pipe(
-      map((data) => ({ data } as MessageEvent)),
-    );
-  }
 
   @Get()
   @ApiOperation({ summary: "List orders" })
