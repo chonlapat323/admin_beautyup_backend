@@ -84,6 +84,13 @@ class MarkPaidDto {
   reference?: string;
 }
 
+class ApproveWithdrawalDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  slipUrl?: string;
+}
+
 class RejectWithdrawalDto {
   @ApiPropertyOptional()
   @IsOptional()
@@ -205,9 +212,10 @@ export class CommissionController {
   @ApiOperation({ summary: "Approve a withdrawal request" })
   approveWithdrawal(
     @Param("id") id: string,
+    @Body() dto: ApproveWithdrawalDto,
     @Headers("x-processed-by") processedByEmail?: string,
   ) {
-    return this.commissionService.approveWithdrawal(id, processedByEmail);
+    return this.commissionService.approveWithdrawal(id, dto.slipUrl, processedByEmail);
   }
 
   @Patch("withdrawals/:id/reject")

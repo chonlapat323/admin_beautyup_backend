@@ -13,6 +13,7 @@ type SettingKey = keyof typeof DEFAULTS;
 const STRING_DEFAULTS: Record<string, string> = {
   youtube_url: "",
   tiktok_url: "",
+  line_oa_url: "",
 };
 
 export type PointTier = { minSpend: number; points: number };
@@ -48,6 +49,7 @@ export class SettingsService {
       social: {
         youtubeUrl: str("youtube_url"),
         tiktokUrl: str("tiktok_url"),
+        lineOaUrl: str("line_oa_url"),
       },
     };
   }

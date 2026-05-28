@@ -226,12 +226,12 @@ export class CommissionService {
     });
   }
 
-  async approveWithdrawal(id: string, processedByEmail?: string) {
+  async approveWithdrawal(id: string, slipUrl?: string, processedByEmail?: string) {
     const req = await this.prisma.withdrawalRequest.findUnique({ where: { id } });
     if (!req || req.status !== "PENDING") throw new Error("ไม่พบรายการหรือไม่อยู่ในสถานะรอดำเนินการ");
     return this.prisma.withdrawalRequest.update({
       where: { id },
-      data: { status: "APPROVED", processedAt: new Date(), processedByEmail },
+      data: { status: "APPROVED", slipUrl, processedAt: new Date(), processedByEmail },
     });
   }
 

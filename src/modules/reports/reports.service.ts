@@ -53,17 +53,18 @@ export class ReportsService {
       select: {
         memberId: true,
         totalAmount: true,
-        member: { select: { fullName: true, email: true } },
+        member: { select: { fullName: true, email: true, memberType: true } },
       },
     });
 
-    const map = new Map<string, { memberId: string; name: string; email: string; orderCount: number; totalSpent: number }>();
+    const map = new Map<string, { memberId: string; name: string; email: string; memberType: string; orderCount: number; totalSpent: number }>();
     for (const order of orders) {
       if (!order.memberId || !order.member) continue;
       const cur = map.get(order.memberId) ?? {
         memberId: order.memberId,
         name: order.member.fullName,
         email: order.member.email ?? "",
+        memberType: order.member.memberType ?? "REGULAR",
         orderCount: 0,
         totalSpent: 0,
       };
@@ -75,14 +76,41 @@ export class ReportsService {
     return [...map.values()].sort((a, b) => b.totalSpent - a.totalSpent);
   }
 
-  async stockReport() {
+  async stockReport(brandId?: string) {
+    const where: Prisma.ProductWhereInput = {};
+    if (brandId) where.brandId = brandId;
+
     const products = await this.prisma.product.findMany({
-      select: { id: true, name: true, sku: true, stock: true },
+      where,
+      select: {
+        id: true,
+        name: true,
+        sku: true,
+        stock: true,
+        brand: { select: { id: true, name: true } },
+      },
       orderBy: { stock: "asc" },
     });
 
+    const productIds = products.map((p) => p.id);
+    const soldItems = productIds.length > 0
+      ? await this.prisma.orderItem.groupBy({
+          by: ["productId"],
+          where: { productId: { in: productIds }, order: { status: "PAID" } },
+          _sum: { quantity: true },
+        })
+      : [];
+
+    const soldMap = new Map(soldItems.map((s) => [s.productId, s._sum.quantity ?? 0]));
+
     return products.map((p) => ({
-      ...p,
+      id: p.id,
+      name: p.name,
+      sku: p.sku,
+      stock: p.stock,
+      brandId: p.brand?.id ?? null,
+      brandName: p.brand?.name ?? null,
+      soldQuantity: soldMap.get(p.id) ?? 0,
       status: p.stock === 0 ? "OUT_OF_STOCK" : p.stock <= 5 ? "LOW" : "NORMAL",
     }));
   }

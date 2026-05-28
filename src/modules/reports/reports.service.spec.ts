@@ -3,7 +3,7 @@ import { ReportsService } from "./reports.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 const mockPrisma = {
-  orderItem: { findMany: jest.fn() },
+  orderItem: { findMany: jest.fn(), groupBy: jest.fn().mockResolvedValue([]) },
   order: { findMany: jest.fn() },
   product: { findMany: jest.fn() },
 };

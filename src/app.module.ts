@@ -8,6 +8,7 @@ import { BrandsModule } from "./modules/brands/brands.module";
 import { CollectionsModule } from "./modules/collections/collections.module";
 import { AdminUsersModule } from "./modules/admin-users/admin-users.module";
 import { BannersModule } from "./modules/banners/banners.module";
+import { BundlesModule } from "./modules/bundles/bundles.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CategoriesModule } from "./modules/categories/categories.module";
 import { MembersModule } from "./modules/members/members.module";
@@ -61,6 +62,7 @@ import { CreditTransactionsModule } from "./modules/credit-transactions/credit-t
     ShadeGroupsModule,
     ShadesModule,
     BannersModule,
+    BundlesModule,
     SeederModule,
     UploadsModule,
     SalonCodesModule,

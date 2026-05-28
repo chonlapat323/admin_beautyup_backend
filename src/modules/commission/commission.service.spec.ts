@@ -108,11 +108,11 @@ describe("CommissionService", () => {
       mockPrisma.$transaction.mockResolvedValue([]);
 
       // Act
-      const result = await service.updateRates(12, 6);
+      const result = await service.updateRates(12, 6, 3);
 
       // Assert
       expect(mockPrisma.$transaction).toHaveBeenCalled();
-      expect(result).toEqual({ salon: 12, regular: 6 });
+      expect(result).toEqual({ salon: 12, regular: 6, sales: 3 });
     });
   });
 

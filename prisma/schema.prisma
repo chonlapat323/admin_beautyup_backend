@@ -68,6 +68,28 @@ model Banner {
   updatedAt   DateTime @updatedAt
 }
 
+model Bundle {
+  id          String       @id @default(cuid())
+  name        String
+  description String?
+  price       Decimal      @db.Decimal(10, 2)
+  imageUrl    String?
+  isActive    Boolean      @default(true)
+  sortOrder   Int          @default(0)
+  items       BundleItem[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model BundleItem {
+  id        String  @id @default(cuid())
+  bundleId  String
+  productId String
+  quantity  Int     @default(1)
+  bundle    Bundle  @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+}
+
 model Role {
   id          String      @id @default(cuid())
   name        String      @unique
@@ -283,6 +305,7 @@ model Product {
   images            ProductImage[]
   orderItems        OrderItem[]
   stockMovements    StockMovement[]
+  bundleItems       BundleItem[]
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
 }
@@ -487,6 +510,7 @@ model WithdrawalRequest {
   amount             Decimal          @db.Decimal(10, 2)
   status             WithdrawalStatus @default(PENDING)
   note                String?
+  slipUrl             String?
   bankName            String?
   bankAccountNumber   String?
   bankAccountName     String?

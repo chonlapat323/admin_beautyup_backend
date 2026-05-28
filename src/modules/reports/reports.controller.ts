@@ -27,7 +27,7 @@ export class ReportsController {
 
   @Get("stock")
   @ApiOperation({ summary: "Current stock level for all products" })
-  stock() {
-    return this.reportsService.stockReport();
+  stock(@Query("brandId") brandId?: string) {
+    return this.reportsService.stockReport(brandId);
   }
 }
