@@ -46,6 +46,11 @@ class UpdateSettingsDto {
   @IsOptional()
   @IsString()
   tiktokUrl?: string;
+
+  @ApiProperty({ example: "https://line.me/R/ti/p/@beautyup", required: false })
+  @IsOptional()
+  @IsString()
+  lineOaUrl?: string;
 }
 
 @ApiTags("Settings")

@@ -76,6 +76,7 @@ export class SettingsService {
     pointTiers?: PointTier[];
     youtubeUrl?: string;
     tiktokUrl?: string;
+    lineOaUrl?: string;
   }) {
     const pairs: [string, string | undefined][] = [
       ["free_shipping_threshold", payload.freeShippingThreshold !== undefined ? String(payload.freeShippingThreshold) : undefined],
@@ -84,6 +85,7 @@ export class SettingsService {
       ["point_tiers", payload.pointTiers !== undefined ? JSON.stringify(payload.pointTiers) : undefined],
       ["youtube_url", payload.youtubeUrl !== undefined ? payload.youtubeUrl : undefined],
       ["tiktok_url", payload.tiktokUrl !== undefined ? payload.tiktokUrl : undefined],
+      ["line_oa_url", payload.lineOaUrl !== undefined ? payload.lineOaUrl : undefined],
     ];
 
     await Promise.all(
