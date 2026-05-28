@@ -66,6 +66,7 @@ export class BundlesService {
   async create(payload: {
     name: string;
     description?: string;
+    isActive?: boolean;
     sortOrder?: number;
     items?: { productId: string; quantity: number }[];
   }) {
@@ -74,6 +75,7 @@ export class BundlesService {
       data: {
         name: payload.name,
         description: payload.description,
+        isActive: payload.isActive ?? true,
         sortOrder: payload.sortOrder ?? count,
       },
     });

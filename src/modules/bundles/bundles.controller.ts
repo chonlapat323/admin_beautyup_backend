@@ -36,6 +36,7 @@ class BundleItemInputDto {
 class CreateBundleDto {
   @ApiProperty() @IsString() name!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
   @ApiPropertyOptional() @IsOptional() @IsInt() sortOrder?: number;
   @ApiPropertyOptional({ type: [BundleItemInputDto] })
   @IsOptional()
