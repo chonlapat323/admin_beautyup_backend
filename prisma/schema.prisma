@@ -72,7 +72,6 @@ model Bundle {
   id          String       @id @default(cuid())
   name        String
   description String?
-  price       Decimal      @db.Decimal(10, 2)
   imageUrl    String?
   isActive    Boolean      @default(true)
   sortOrder   Int          @default(0)

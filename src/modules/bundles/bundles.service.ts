@@ -65,7 +65,6 @@ export class BundlesService {
 
   async create(payload: {
     name: string;
-    price: number;
     description?: string;
     sortOrder?: number;
     items?: { productId: string; quantity: number }[];
@@ -74,7 +73,6 @@ export class BundlesService {
     const bundle = await this.prisma.bundle.create({
       data: {
         name: payload.name,
-        price: payload.price,
         description: payload.description,
         sortOrder: payload.sortOrder ?? count,
       },
@@ -95,7 +93,6 @@ export class BundlesService {
     id: string,
     payload: {
       name?: string;
-      price?: number;
       description?: string;
       sortOrder?: number;
       isActive?: boolean;

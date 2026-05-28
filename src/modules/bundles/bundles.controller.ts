@@ -19,7 +19,6 @@ import {
   IsArray,
   IsBoolean,
   IsInt,
-  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -36,7 +35,6 @@ class BundleItemInputDto {
 
 class CreateBundleDto {
   @ApiProperty() @IsString() name!: string;
-  @ApiProperty() @IsNumber() price!: number;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() sortOrder?: number;
   @ApiPropertyOptional({ type: [BundleItemInputDto] })
@@ -49,7 +47,6 @@ class CreateBundleDto {
 
 class UpdateBundleDto {
   @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
-  @ApiPropertyOptional() @IsOptional() @IsNumber() price?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() description?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() sortOrder?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isActive?: boolean;
@@ -108,10 +105,7 @@ export class BundlesController {
   @Post()
   @ApiOperation({ summary: "Create bundle" })
   create(@Body() dto: CreateBundleDto) {
-    return this.bundlesService.create({
-      ...dto,
-      price: Number(dto.price),
-    });
+    return this.bundlesService.create(dto);
   }
 
   @Patch("reorder")
@@ -123,10 +117,7 @@ export class BundlesController {
   @Patch(":id")
   @ApiOperation({ summary: "Update bundle" })
   update(@Param("id") id: string, @Body() dto: UpdateBundleDto) {
-    return this.bundlesService.update(id, {
-      ...dto,
-      price: dto.price !== undefined ? Number(dto.price) : undefined,
-    });
+    return this.bundlesService.update(id, dto);
   }
 
   @Post(":id/image")
