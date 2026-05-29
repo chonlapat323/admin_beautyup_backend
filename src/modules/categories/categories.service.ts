@@ -108,6 +108,7 @@ export class CategoriesService {
     description?: string;
     imageUrl?: string;
     tempImageFile?: string;
+    brandId?: string;
     requiresShadeSelection?: boolean;
     sortOrder?: number;
     isActive?: boolean;
@@ -124,6 +125,7 @@ export class CategoriesService {
         eyebrow: payload.eyebrow,
         description: payload.description,
         imageUrl,
+        brandId: payload.brandId ?? null,
         requiresShadeSelection: payload.requiresShadeSelection ?? false,
         sortOrder: payload.sortOrder ?? 0,
         isActive: payload.isActive ?? true,
@@ -160,6 +162,7 @@ export class CategoriesService {
       description?: string;
       imageUrl?: string;
       tempImageFile?: string;
+      brandId?: string;
       requiresShadeSelection?: boolean;
       sortOrder?: number;
       isActive?: boolean;
@@ -187,6 +190,7 @@ export class CategoriesService {
         ...(payload.eyebrow !== undefined && { eyebrow: payload.eyebrow }),
         ...(payload.description !== undefined && { description: payload.description }),
         ...(imageUrl !== undefined && { imageUrl }),
+        ...("brandId" in payload && { brandId: payload.brandId ?? null }),
         ...(payload.requiresShadeSelection !== undefined && { requiresShadeSelection: payload.requiresShadeSelection }),
         ...(payload.sortOrder !== undefined && { sortOrder: payload.sortOrder }),
         ...(payload.isActive !== undefined && { isActive: payload.isActive }),

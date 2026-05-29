@@ -34,6 +34,11 @@ class CreateCategoryDto {
   @IsString()
   tempImageFile?: string;
 
+  @ApiPropertyOptional({ example: "clxyz..." })
+  @IsOptional()
+  @IsString()
+  brandId?: string;
+
   @ApiPropertyOptional({ example: false })
   @IsOptional()
   @IsBoolean()
