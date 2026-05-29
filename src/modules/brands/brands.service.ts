@@ -77,6 +77,15 @@ export class BrandsService {
     return this.prisma.brand.update({ where: { id }, data: updateData });
   }
 
+  async reorder(items: { id: string; sortOrder: number }[]) {
+    await this.prisma.$transaction(
+      items.map((item) =>
+        this.prisma.brand.update({ where: { id: item.id }, data: { sortOrder: item.sortOrder } }),
+      ),
+    );
+    return this.findAll();
+  }
+
   async remove(id: string) {
     const brand = await this.prisma.brand.findUnique({ where: { id } });
     if (!brand) throw new NotFoundException("ไม่พบ Brand");

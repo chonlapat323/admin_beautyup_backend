@@ -13,6 +13,11 @@ export class BrandsController {
     return this.brandsService.create(body);
   }
 
+  @Patch("reorder")
+  reorder(@Body() body: { items: { id: string; sortOrder: number }[] }) {
+    return this.brandsService.reorder(body.items);
+  }
+
   @Patch(":id")
   update(
     @Param("id") id: string,
