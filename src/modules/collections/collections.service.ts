@@ -9,7 +9,10 @@ function toSlug(name: string): string {
   return `col-${Buffer.from(name.trim()).toString("hex").slice(0, 20)}`;
 }
 
-const CATEGORY_SELECT = { category: { select: { id: true, name: true } } } as const;
+const INCLUDE = {
+  category: { select: { id: true, name: true } },
+  brand: { select: { id: true, name: true } },
+} as const;
 
 @Injectable()
 export class CollectionsService {
@@ -18,11 +21,11 @@ export class CollectionsService {
   async findAll() {
     return this.prisma.collection.findMany({
       orderBy: { sortOrder: "asc" },
-      include: CATEGORY_SELECT,
+      include: INCLUDE,
     });
   }
 
-  async create(data: { name: string; sortOrder?: number; categoryId?: string | null }) {
+  async create(data: { name: string; sortOrder?: number; categoryId?: string | null; brandId?: string | null }) {
     const slug = toSlug(data.name);
     try {
       return await this.prisma.collection.create({
@@ -31,8 +34,9 @@ export class CollectionsService {
           slug,
           sortOrder: data.sortOrder ?? 0,
           categoryId: data.categoryId ?? null,
+          brandId: data.brandId ?? null,
         },
-        include: CATEGORY_SELECT,
+        include: INCLUDE,
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -42,7 +46,7 @@ export class CollectionsService {
     }
   }
 
-  async update(id: string, data: { name?: string; isActive?: boolean; sortOrder?: number; categoryId?: string | null }) {
+  async update(id: string, data: { name?: string; isActive?: boolean; sortOrder?: number; categoryId?: string | null; brandId?: string | null }) {
     const col = await this.prisma.collection.findUnique({ where: { id } });
     if (!col) throw new NotFoundException("ไม่พบ Collection");
 
@@ -54,12 +58,13 @@ export class CollectionsService {
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
     if ("categoryId" in data) updateData.categoryId = data.categoryId ?? null;
+    if ("brandId" in data) updateData.brandId = data.brandId ?? null;
 
     try {
       return await this.prisma.collection.update({
         where: { id },
         data: updateData,
-        include: CATEGORY_SELECT,
+        include: INCLUDE,
       });
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
