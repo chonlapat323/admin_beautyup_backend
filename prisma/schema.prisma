@@ -255,6 +255,7 @@ model Brand {
   id          String       @id @default(cuid())
   name        String       @unique
   slug        String       @unique
+  imageUrl    String?
   isActive    Boolean      @default(true)
   sortOrder   Int          @default(0)
   categories  Category[]

@@ -9,12 +9,15 @@ export class BrandsController {
   findAll() { return this.brandsService.findAll(); }
 
   @Post()
-  create(@Body() body: { name: string; sortOrder?: number }) {
+  create(@Body() body: { name: string; sortOrder?: number; tempImageFile?: string; imageUrl?: string }) {
     return this.brandsService.create(body);
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() body: { name?: string; isActive?: boolean; sortOrder?: number }) {
+  update(
+    @Param("id") id: string,
+    @Body() body: { name?: string; isActive?: boolean; sortOrder?: number; tempImageFile?: string; imageUrl?: string },
+  ) {
     return this.brandsService.update(id, body);
   }
 
