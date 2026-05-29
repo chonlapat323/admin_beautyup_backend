@@ -1,9 +1,36 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Patch, Post, UnauthorizedException } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Headers, Param, Patch, Post, UnauthorizedException, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
+import { existsSync, mkdirSync } from "fs";
+import { extname, join } from "path";
+import { diskStorage } from "multer";
 import { RewardProductsService } from "../reward-products/reward-products.service";
-import { ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
+import { ApiConsumes, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from "@nestjs/swagger";
 import { IsArray, IsBoolean, IsInt, IsNumber, IsOptional, IsString, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
 import { MobileService } from "./mobile.service";
+
+const membersDir = join(process.cwd(), "uploads", "members");
+
+const profileImageMulterOptions = {
+  storage: diskStorage({
+    destination: (_req: unknown, _file: unknown, cb: (err: Error | null, dest: string) => void) => {
+      if (!existsSync(membersDir)) mkdirSync(membersDir, { recursive: true });
+      cb(null, membersDir);
+    },
+    filename: (_req: unknown, file: Express.Multer.File, cb: (err: Error | null, name: string) => void) => {
+      const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      cb(null, `${unique}${extname(file.originalname)}`);
+    },
+  }),
+  fileFilter: (_req: unknown, file: Express.Multer.File, cb: (err: Error | null, ok: boolean) => void) => {
+    if (/image\/(jpeg|png|webp|gif)/.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed"), false);
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+};
 
 
 class RegisterDto {
@@ -378,6 +405,19 @@ export class MobileController {
   async updatePushToken(@Headers("authorization") auth: string, @Body() dto: UpdatePushTokenDto) {
     const member = await this.extractMember(auth);
     return this.mobileService.updatePushToken(member.id, dto.expoPushToken);
+  }
+
+  @Patch("me/profile-image")
+  @ApiOperation({ summary: "Upload profile image for current member" })
+  @ApiConsumes("multipart/form-data")
+  @UseInterceptors(FileInterceptor("image", profileImageMulterOptions))
+  async uploadProfileImage(
+    @Headers("authorization") auth: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException("กรุณาแนบไฟล์รูปภาพ");
+    const member = await this.extractMember(auth);
+    return this.mobileService.updateProfileImage(member.id, file);
   }
 
   private async extractMember(auth: string) {

@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import { createHash, randomBytes } from "crypto";
+import { existsSync, unlinkSync } from "fs";
+import { join } from "path";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { KBankService } from "../kbank/kbank.service";
 import { OmiseService } from "../omise/omise.service";
@@ -1135,6 +1137,34 @@ export class MobileService {
   async updatePushToken(memberId: string, expoPushToken: string) {
     await this.prisma.member.update({ where: { id: memberId }, data: { expoPushToken } });
     return { message: "บันทึก push token แล้ว" };
+  }
+
+  async updateProfileImage(memberId: string, file: Express.Multer.File): Promise<{ profileImageUrl: string }> {
+    const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT ?? 3000}`;
+    const profileImageUrl = `${appUrl}/uploads/members/${file.filename}`;
+
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      select: { profileImageUrl: true },
+    });
+
+    // Delete old image file if it exists
+    if (member?.profileImageUrl) {
+      try {
+        const oldFilename = member.profileImageUrl.split("/").pop();
+        if (oldFilename) {
+          const oldPath = join(process.cwd(), "uploads", "members", oldFilename);
+          if (existsSync(oldPath)) unlinkSync(oldPath);
+        }
+      } catch { /* ignore */ }
+    }
+
+    await this.prisma.member.update({
+      where: { id: memberId },
+      data: { profileImageUrl },
+    });
+
+    return { profileImageUrl };
   }
 
   private safeProfile(member: {
