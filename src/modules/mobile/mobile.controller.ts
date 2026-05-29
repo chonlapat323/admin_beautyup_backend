@@ -407,7 +407,7 @@ export class MobileController {
     return this.mobileService.updatePushToken(member.id, dto.expoPushToken);
   }
 
-  @Patch("me/profile-image")
+  @Post("me/profile-image")
   @ApiOperation({ summary: "Upload profile image for current member" })
   @ApiConsumes("multipart/form-data")
   @UseInterceptors(FileInterceptor("image", profileImageMulterOptions))
