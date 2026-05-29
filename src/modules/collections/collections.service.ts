@@ -1,8 +1,12 @@
-import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 function toSlug(name: string): string {
-  return name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  const ascii = name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
+  if (ascii) return ascii;
+  // Thai / non-ASCII → encode as hex so slug is still unique and deterministic
+  return `col-${Buffer.from(name.trim()).toString("hex").slice(0, 20)}`;
 }
 
 const CATEGORY_SELECT = { category: { select: { id: true, name: true } } } as const;
@@ -20,17 +24,22 @@ export class CollectionsService {
 
   async create(data: { name: string; sortOrder?: number; categoryId?: string | null }) {
     const slug = toSlug(data.name);
-    const existing = await this.prisma.collection.findUnique({ where: { slug } });
-    if (existing) throw new ConflictException("Collection นี้มีอยู่แล้ว");
-    return this.prisma.collection.create({
-      data: {
-        name: data.name,
-        slug,
-        sortOrder: data.sortOrder ?? 0,
-        categoryId: data.categoryId ?? null,
-      },
-      include: CATEGORY_SELECT,
-    });
+    try {
+      return await this.prisma.collection.create({
+        data: {
+          name: data.name.trim(),
+          slug,
+          sortOrder: data.sortOrder ?? 0,
+          categoryId: data.categoryId ?? null,
+        },
+        include: CATEGORY_SELECT,
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        throw new ConflictException("ชื่อ Collection นี้มีอยู่แล้ว");
+      }
+      throw e;
+    }
   }
 
   async update(id: string, data: { name?: string; isActive?: boolean; sortOrder?: number; categoryId?: string | null }) {
@@ -46,11 +55,18 @@ export class CollectionsService {
     if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
     if ("categoryId" in data) updateData.categoryId = data.categoryId ?? null;
 
-    return this.prisma.collection.update({
-      where: { id },
-      data: updateData,
-      include: CATEGORY_SELECT,
-    });
+    try {
+      return await this.prisma.collection.update({
+        where: { id },
+        data: updateData,
+        include: CATEGORY_SELECT,
+      });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        throw new ConflictException("ชื่อ Collection นี้มีอยู่แล้ว");
+      }
+      throw e;
+    }
   }
 
   async remove(id: string) {
