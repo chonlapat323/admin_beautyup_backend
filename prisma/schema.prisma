@@ -258,7 +258,6 @@ model Brand {
   isActive    Boolean      @default(true)
   sortOrder   Int          @default(0)
   categories  Category[]
-  collections Collection[]
   products    Product[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -268,8 +267,6 @@ model Collection {
   id         String    @id @default(cuid())
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
-  brandId    String?
-  brand      Brand?    @relation(fields: [brandId], references: [id])
   name       String
   slug       String    @unique
   isActive   Boolean   @default(true)

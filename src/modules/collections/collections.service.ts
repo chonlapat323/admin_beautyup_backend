@@ -10,8 +10,13 @@ function toSlug(name: string): string {
 }
 
 const INCLUDE = {
-  category: { select: { id: true, name: true } },
-  brand: { select: { id: true, name: true } },
+  category: {
+    select: {
+      id: true,
+      name: true,
+      brand: { select: { id: true, name: true } },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -25,7 +30,7 @@ export class CollectionsService {
     });
   }
 
-  async create(data: { name: string; sortOrder?: number; categoryId?: string | null; brandId?: string | null }) {
+  async create(data: { name: string; sortOrder?: number; categoryId?: string | null }) {
     const slug = toSlug(data.name);
     try {
       return await this.prisma.collection.create({
@@ -34,7 +39,6 @@ export class CollectionsService {
           slug,
           sortOrder: data.sortOrder ?? 0,
           categoryId: data.categoryId ?? null,
-          brandId: data.brandId ?? null,
         },
         include: INCLUDE,
       });
@@ -46,7 +50,7 @@ export class CollectionsService {
     }
   }
 
-  async update(id: string, data: { name?: string; isActive?: boolean; sortOrder?: number; categoryId?: string | null; brandId?: string | null }) {
+  async update(id: string, data: { name?: string; isActive?: boolean; sortOrder?: number; categoryId?: string | null }) {
     const col = await this.prisma.collection.findUnique({ where: { id } });
     if (!col) throw new NotFoundException("ไม่พบ Collection");
 
@@ -58,7 +62,6 @@ export class CollectionsService {
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
     if ("categoryId" in data) updateData.categoryId = data.categoryId ?? null;
-    if ("brandId" in data) updateData.brandId = data.brandId ?? null;
 
     try {
       return await this.prisma.collection.update({
