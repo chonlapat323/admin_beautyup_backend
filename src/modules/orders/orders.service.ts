@@ -153,7 +153,7 @@ export class OrdersService {
   }
 
   async adminCreate(data: {
-    memberId: string;
+    memberId?: string | null;
     items: { productId: string; quantity: number }[];
     shippingName: string;
     shippingPhone: string;
@@ -189,7 +189,7 @@ export class OrdersService {
       const created = await tx.order.create({
         data: {
           orderNumber,
-          memberId: data.memberId,
+          memberId: data.memberId ?? null,
           status: "PROCESSING" as never,
           subtotalAmount: subtotal,
           shippingAmount: 0,
@@ -231,7 +231,7 @@ export class OrdersService {
       action: "order.admin_create",
       entityType: "order",
       entityId: order.id,
-      detail: JSON.stringify({ orderNumber, memberId: data.memberId }),
+      detail: JSON.stringify({ orderNumber, memberId: data.memberId ?? "INTERNAL" }),
     });
 
     this.orderEventSubject.next({ orderId: order.id, event: "new_order" });

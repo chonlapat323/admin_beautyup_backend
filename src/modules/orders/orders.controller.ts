@@ -40,7 +40,7 @@ export class OrdersController {
   adminCreate(
     @Body()
     body: {
-      memberId: string;
+      memberId?: string;
       items: { productId: string; quantity: number }[];
       shippingName: string;
       shippingPhone: string;
