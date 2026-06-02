@@ -2,6 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { Subject } from "rxjs";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { CommissionService } from "../commission/commission.service";
+import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { StockService } from "../stock/stock.service";
 
@@ -17,6 +18,7 @@ export class OrdersService {
     private readonly commissionService: CommissionService,
     private readonly stockService: StockService,
     private readonly auditLog: AuditLogService,
+    private readonly flowAccountService: FlowAccountService,
   ) {}
 
   async findAll() {
@@ -234,7 +236,51 @@ export class OrdersService {
       detail: JSON.stringify({ orderNumber, memberId: data.memberId ?? "INTERNAL" }),
     });
 
+    // Sync to FlowAccount — event order บันทึกเป็นใบเสร็จ ยอด ฿0 (100% discount)
+    this.syncEventOrderToFlowAccount(order.id, orderNumber, order.createdAt, subtotal, orderItems, data.shippingName, data.shippingPhone).catch((err) =>
+      this.logger.error(`[FlowAccount event order sync] FAILED for order ${order.id}: ${String(err)}`),
+    );
+
     this.orderEventSubject.next({ orderId: order.id, event: "new_order" });
     return { message: "Order created.", id: order.id, orderNumber: order.orderNumber };
+  }
+
+  private async syncEventOrderToFlowAccount(
+    orderId: string,
+    orderNumber: string,
+    createdAt: Date,
+    subtotal: number,
+    items: { name: string; quantity: number; unitPrice: number; totalPrice: number }[],
+    contactName: string,
+    contactPhone?: string,
+  ): Promise<void> {
+    const result = await this.flowAccountService.createReceipt({
+      orderNumber,
+      orderId,
+      publishedOn: new Date(createdAt).toISOString().slice(0, 10),
+      contactId: null,
+      contactName: contactName || "Beauty Up (Internal)",
+      contactEmail: undefined,
+      contactPhone: contactPhone,
+      subtotal,
+      grandTotal: 0, // 100% discount
+      items: items.map((i) => ({
+        name: i.name,
+        quantity: i.quantity,
+        pricePerUnit: i.unitPrice,
+        total: i.totalPrice,
+      })),
+    });
+
+    if (result) {
+      await this.prisma.order.update({
+        where: { id: orderId },
+        data: {
+          flowAccountDocId: result.taxInvoiceId,
+          flowAccountReceiptId: result.receiptId || null,
+        },
+      });
+      this.logger.log(`[FlowAccount event order] SUCCESS taxInvoiceId=${result.taxInvoiceId} for order ${orderId}`);
+    }
   }
 }
