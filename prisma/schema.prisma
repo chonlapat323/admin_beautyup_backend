@@ -462,6 +462,7 @@ model RewardRedemption {
   pointsSpent       Int
   status            RedemptionStatus @default(PENDING)
   trackingNumber    String?
+  carrierId         String?
   shippingRecipient String?
   shippingPhone     String?
   shippingAddress   String?

@@ -32,6 +32,7 @@ class UpdateRewardProductDto {
 class UpdateRedemptionStatusDto {
   @ApiProperty({ enum: RedemptionStatus }) @IsEnum(RedemptionStatus) status!: RedemptionStatus;
   @ApiPropertyOptional() @IsOptional() @IsString() trackingNumber?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() carrierId?: string;
 }
 
 @ApiTags("Reward Products")
@@ -60,7 +61,7 @@ export class RewardProductsController {
   @Patch("redemptions/:id/status")
   @ApiOperation({ summary: "Update redemption fulfillment status" })
   updateRedemptionStatus(@Param("id") id: string, @Body() dto: UpdateRedemptionStatusDto) {
-    return this.service.updateRedemptionStatus(id, dto.status, dto.trackingNumber);
+    return this.service.updateRedemptionStatus(id, dto.status, dto.trackingNumber, dto.carrierId);
   }
 
   @Get("generate-sku")

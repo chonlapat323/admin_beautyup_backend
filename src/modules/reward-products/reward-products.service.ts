@@ -267,6 +267,7 @@ export class RewardProductsService {
     id: string,
     status: RedemptionStatus,
     trackingNumber?: string,
+    carrierId?: string,
   ) {
     const redemption = await this.prisma.rewardRedemption.findUnique({
       where: { id },
@@ -283,6 +284,7 @@ export class RewardProductsService {
       data: {
         status: resolvedStatus,
         trackingNumber: trackingNumber?.trim() || undefined,
+        carrierId: carrierId || undefined,
         statusUpdatedAt: new Date(),
       },
       include: {
