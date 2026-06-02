@@ -349,6 +349,7 @@ model Order {
   shippingPhone  String?
   shippingAddr   String?
   trackingNumber        String?
+  carrierId             String?
   note                  String?
   chargeId              String?
   paymentMethod         String?

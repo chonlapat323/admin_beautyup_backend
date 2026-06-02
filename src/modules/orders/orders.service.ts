@@ -112,7 +112,7 @@ export class OrdersService {
     return { message: "Order status updated.", id: updated.id, status: updated.status };
   }
 
-  async updateTracking(id: string, trackingNumber: string, changedByName = "Admin") {
+  async updateTracking(id: string, trackingNumber: string, changedByName = "Admin", carrierId?: string) {
     const order = await this.prisma.order.findUnique({ where: { id }, select: { id: true, status: true } });
     if (!order) throw new Error("Order not found");
 
@@ -123,6 +123,7 @@ export class OrdersService {
         where: { id },
         data: {
           trackingNumber,
+          ...(carrierId !== undefined ? { carrierId } : {}),
           ...(shouldShip ? { status: "SHIPPED" as never } : {}),
         },
       });
