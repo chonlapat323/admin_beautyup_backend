@@ -274,11 +274,15 @@ export class RewardProductsService {
     });
     if (!redemption) throw new NotFoundException("ไม่พบรายการแลกแต้ม");
 
+    // Auto-set SHIPPED when tracking number is provided — same behavior as orders
+    const resolvedStatus: RedemptionStatus =
+      trackingNumber?.trim() && status !== "DELIVERED" ? "SHIPPED" : status;
+
     const updated = await this.prisma.rewardRedemption.update({
       where: { id },
       data: {
-        status,
-        trackingNumber: trackingNumber ?? undefined,
+        status: resolvedStatus,
+        trackingNumber: trackingNumber?.trim() || undefined,
         statusUpdatedAt: new Date(),
       },
       include: {
@@ -292,7 +296,7 @@ export class RewardProductsService {
       const notifications: Record<RedemptionStatus, { title: string; body: string }> = {
         PENDING: { title: "", body: "" },
         PREPARING: { title: "กำลังเตรียมพัสดุ 📦", body: "ของรางวัลของคุณกำลังถูกเตรียม" },
-        SHIPPED: { title: "จัดส่งแล้ว 🚚", body: `หมายเลขพัสดุ: ${trackingNumber ?? ""}` },
+        SHIPPED: { title: "จัดส่งแล้ว 🚚", body: trackingNumber?.trim() ? `หมายเลขพัสดุ: ${trackingNumber.trim()}` : "อยู่ระหว่างการจัดส่ง" },
         DELIVERED: { title: "ส่งถึงแล้ว ✅", body: "ของรางวัลของคุณถึงปลายทางแล้ว" },
       };
       const notif = notifications[status];
