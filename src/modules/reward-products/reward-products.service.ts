@@ -275,14 +275,10 @@ export class RewardProductsService {
     });
     if (!redemption) throw new NotFoundException("ไม่พบรายการแลกแต้ม");
 
-    // Auto-set SHIPPED when tracking number is provided — same behavior as orders
-    const resolvedStatus: RedemptionStatus =
-      trackingNumber?.trim() && status !== "DELIVERED" ? "SHIPPED" : status;
-
     const updated = await this.prisma.rewardRedemption.update({
       where: { id },
       data: {
-        status: resolvedStatus,
+        status,
         trackingNumber: trackingNumber?.trim() || undefined,
         carrierId: carrierId || undefined,
         statusUpdatedAt: new Date(),
