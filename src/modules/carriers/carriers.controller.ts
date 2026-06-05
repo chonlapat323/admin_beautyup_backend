@@ -33,6 +33,7 @@ export class CarriersController {
       color?: string;
       textColor?: string;
       logoUrl?: string;
+      tempImageFile?: string;
       trackingUrl?: string;
       sortOrder?: number;
     },
@@ -50,6 +51,7 @@ export class CarriersController {
       color?: string;
       textColor?: string;
       logoUrl?: string;
+      tempImageFile?: string;
       trackingUrl?: string;
       isActive?: boolean;
       sortOrder?: number;
