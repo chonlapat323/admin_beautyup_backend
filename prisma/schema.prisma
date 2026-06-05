@@ -251,6 +251,20 @@ model Shade {
   updatedAt    DateTime   @updatedAt
 }
 
+model Carrier {
+  id          String   @id @default(cuid())
+  name        String
+  shortName   String
+  color       String   @default("#000000")
+  textColor   String   @default("#FFFFFF")
+  logoUrl     String?
+  trackingUrl String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Brand {
   id          String       @id @default(cuid())
   name        String       @unique
