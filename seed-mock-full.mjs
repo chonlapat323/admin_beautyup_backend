@@ -14,6 +14,7 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import pg from 'pg';
 import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
@@ -31,7 +32,9 @@ try {
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is not set — run from the backend directory or set env');
-const adapter = new PrismaPg({ connectionString });
+// Use pg.Pool with ssl: rejectUnauthorized=false for self-signed certs
+const pool = new pg.Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 const IS_CLEAN = process.argv.includes('--clean');
 
@@ -645,5 +648,5 @@ async function main() {
 }
 
 main()
-  .catch(e => { console.error('\n❌', e.message); process.exit(1); })
+  .catch(e => { console.error('\n❌', e); process.exit(1); })
   .finally(() => prisma.$disconnect());
