@@ -14,10 +14,12 @@
  */
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import pg from 'pg';
 import { createHash } from 'crypto';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
+
+// Bypass TLS verification for self-signed certs (seed script only)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 // Load .env (no external package needed)
 try {
@@ -32,9 +34,7 @@ try {
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is not set — run from the backend directory or set env');
-// Use pg.Pool with ssl: rejectUnauthorized=false for self-signed certs
-const pool = new pg.Pool({ connectionString, ssl: { rejectUnauthorized: false } });
-const adapter = new PrismaPg(pool);
+const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 const IS_CLEAN = process.argv.includes('--clean');
 
