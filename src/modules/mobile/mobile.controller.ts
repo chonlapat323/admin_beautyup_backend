@@ -420,6 +420,23 @@ export class MobileController {
     return this.mobileService.updateProfileImage(member.id, file);
   }
 
+  @Get("me/favorites")
+  @ApiOperation({ summary: "Get favorite product IDs for current member" })
+  async getFavorites(@Headers("authorization") auth: string) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.getFavorites(member.id);
+  }
+
+  @Post("me/favorites/:productId")
+  @ApiOperation({ summary: "Toggle favorite for a product" })
+  async toggleFavorite(
+    @Headers("authorization") auth: string,
+    @Param("productId") productId: string,
+  ) {
+    const member = await this.extractMember(auth);
+    return this.mobileService.toggleFavorite(member.id, productId);
+  }
+
   private async extractMember(auth: string) {
     const token = auth?.replace(/^Bearer\s+/i, "");
     if (!token) throw new UnauthorizedException();

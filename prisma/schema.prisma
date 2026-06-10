@@ -180,8 +180,19 @@ model Member {
   tiktok               String?
   shopee               String?
   lazada               String?
+  favorites            MemberFavorite[]
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
+}
+
+model MemberFavorite {
+  id        String   @id @default(cuid())
+  memberId  String
+  member    Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  productId String
+  createdAt DateTime @default(now())
+
+  @@unique([memberId, productId])
 }
 
 model MemberAddress {

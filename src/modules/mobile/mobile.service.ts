@@ -1167,6 +1167,27 @@ export class MobileService {
     return { profileImageUrl };
   }
 
+  async getFavorites(memberId: string): Promise<string[]> {
+    const rows = await this.prisma.memberFavorite.findMany({
+      where: { memberId },
+      select: { productId: true },
+      orderBy: { createdAt: "desc" },
+    });
+    return rows.map((r) => r.productId);
+  }
+
+  async toggleFavorite(memberId: string, productId: string): Promise<{ favorited: boolean }> {
+    const existing = await this.prisma.memberFavorite.findUnique({
+      where: { memberId_productId: { memberId, productId } },
+    });
+    if (existing) {
+      await this.prisma.memberFavorite.delete({ where: { id: existing.id } });
+      return { favorited: false };
+    }
+    await this.prisma.memberFavorite.create({ data: { memberId, productId } });
+    return { favorited: true };
+  }
+
   private safeProfile(member: {
     id: string;
     fullName: string;
