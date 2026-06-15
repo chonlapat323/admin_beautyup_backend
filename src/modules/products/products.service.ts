@@ -144,7 +144,7 @@ export class ProductsService {
   }
 
   async create(payload: {
-    sku: string;
+    sku?: string;
     name: string;
     slug: string;
     description?: string;
@@ -164,10 +164,11 @@ export class ProductsService {
     const stock = payload.stock ?? 0;
     const reserveStock = Math.ceil(stock * 0.1);
     const sellableStock = stock - reserveStock;
+    const sku = payload.sku || await this.generateSku(payload.brandId, payload.categoryId, payload.collectionId);
 
     const product = await this.prisma.product.create({
       data: {
-        sku: payload.sku,
+        sku,
         name: payload.name,
         slug: payload.slug,
         description: payload.description,

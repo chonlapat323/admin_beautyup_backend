@@ -54,9 +54,10 @@ class OrderedImageItemDto {
 }
 
 class CreateProductDto {
-  @ApiProperty({ example: "SKU-001" })
+  @ApiPropertyOptional({ example: "SKU-001" })
+  @IsOptional()
   @IsString()
-  sku!: string;
+  sku?: string;
 
   @ApiProperty({ example: "Koleston Perfect" })
   @IsString()
