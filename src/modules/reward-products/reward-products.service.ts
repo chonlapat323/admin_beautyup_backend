@@ -120,7 +120,8 @@ export class RewardProductsService {
     tempFiles?: string[];
   }) {
     const { tempFiles, ...rest } = data;
-    const product = await this.prisma.rewardProduct.create({ data: rest });
+    const sku = await this.generateSku();
+    const product = await this.prisma.rewardProduct.create({ data: { ...rest, sku } });
 
     if (tempFiles && tempFiles.length > 0) {
       await this.applyOrderedImages(
