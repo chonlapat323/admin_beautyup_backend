@@ -5,6 +5,7 @@ import { RedemptionStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { PushService } from "../notifications/push.service";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 @Injectable()
 export class RewardProductsService {
@@ -43,6 +44,7 @@ export class RewardProductsService {
       if (!filename) return;
       const filePath = join(this.rewardDir, filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("rewards", filename);
     } catch {
       // ignore
     }
@@ -64,26 +66,36 @@ export class RewardProductsService {
 
     // Upsert in order
     let firstUrl: string | undefined;
+    let firstThumbUrl: string | undefined;
     for (let i = 0; i < orderedImages.length; i++) {
       const item = orderedImages[i];
       if (item.kind === "existing") {
         if (!item.id) continue;
         await this.prisma.rewardProductImage.update({ where: { id: item.id }, data: { sortOrder: i } });
-        if (i === 0) firstUrl = existing.find((e) => e.id === item.id)?.url;
+        if (i === 0) {
+          const existingImg = existing.find((e) => e.id === item.id);
+          firstUrl = existingImg?.url;
+          firstThumbUrl = existingImg?.thumbnailUrl ?? undefined;
+        }
       } else {
         if (!item.filename) continue;
         const url = this.moveTempToReward(item.filename);
         if (!url) continue;
-        await this.prisma.rewardProductImage.create({ data: { rewardProductId, url, sortOrder: i } });
-        if (i === 0) firstUrl = url;
+        const destPath = join(this.rewardDir, item.filename);
+        const thumbnailUrl = await generateThumbFor(destPath, "rewards", this.appUrl);
+        await this.prisma.rewardProductImage.create({ data: { rewardProductId, url, thumbnailUrl, sortOrder: i } });
+        if (i === 0) { firstUrl = url; firstThumbUrl = thumbnailUrl ?? undefined; }
       }
     }
 
-    // Sync imageUrl to first image for mobile compat
+    // Sync imageUrl + thumbnailUrl to first image for mobile compat
     if (firstUrl !== undefined) {
-      await this.prisma.rewardProduct.update({ where: { id: rewardProductId }, data: { imageUrl: firstUrl } });
+      await this.prisma.rewardProduct.update({
+        where: { id: rewardProductId },
+        data: { imageUrl: firstUrl, thumbnailUrl: firstThumbUrl ?? null },
+      });
     } else if (orderedImages.length === 0) {
-      await this.prisma.rewardProduct.update({ where: { id: rewardProductId }, data: { imageUrl: null } });
+      await this.prisma.rewardProduct.update({ where: { id: rewardProductId }, data: { imageUrl: null, thumbnailUrl: null } });
     }
   }
 

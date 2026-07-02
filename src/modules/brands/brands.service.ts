@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
 import { join } from "path";
 import { Injectable, NotFoundException, ConflictException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 function toSlug(name: string): string {
   const ascii = name.toLowerCase().trim().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
@@ -34,6 +35,7 @@ export class BrandsService {
       if (!filename) return;
       const filePath = join(process.cwd(), "uploads", "brands", filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("brands", filename);
     } catch { /* ignore */ }
   }
 
@@ -45,11 +47,18 @@ export class BrandsService {
     const slug = toSlug(data.name);
     const existing = await this.prisma.brand.findUnique({ where: { slug } });
     if (existing) throw new ConflictException("Brand นี้มีอยู่แล้ว");
-    const imageUrl = data.tempImageFile
-      ? (this.moveTempToBrand(data.tempImageFile) ?? data.imageUrl)
-      : data.imageUrl;
+    let imageUrl = data.imageUrl;
+    let thumbnailUrl: string | null = null;
+    if (data.tempImageFile) {
+      const moved = this.moveTempToBrand(data.tempImageFile);
+      if (moved) {
+        imageUrl = moved;
+        const destPath = join(process.cwd(), "uploads", "brands", data.tempImageFile);
+        thumbnailUrl = await generateThumbFor(destPath, "brands", this.appUrl);
+      }
+    }
     return this.prisma.brand.create({
-      data: { name: data.name, slug, sortOrder: data.sortOrder ?? 0, imageUrl },
+      data: { name: data.name, slug, sortOrder: data.sortOrder ?? 0, imageUrl, thumbnailUrl },
     });
   }
 
@@ -65,11 +74,14 @@ export class BrandsService {
       if (moved) {
         if (brand.imageUrl) this.deleteBrandImageFile(brand.imageUrl);
         updateData.imageUrl = moved;
+        const destPath = join(process.cwd(), "uploads", "brands", data.tempImageFile);
+        updateData.thumbnailUrl = await generateThumbFor(destPath, "brands", this.appUrl);
       }
     } else if (typeof data.imageUrl === "string") {
       if (data.imageUrl === "") {
         if (brand.imageUrl) this.deleteBrandImageFile(brand.imageUrl);
         updateData.imageUrl = null;
+        updateData.thumbnailUrl = null;
       } else {
         updateData.imageUrl = data.imageUrl;
       }

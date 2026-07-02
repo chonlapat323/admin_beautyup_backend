@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { AuditLogService } from "../audit-log/audit-log.service";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 type MemberListParams = {
   search?: string;
@@ -54,6 +55,7 @@ export class MembersService {
       if (!filename) return;
       const filePath = join(this.memberDir, filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("members", filename);
     } catch { /* ignore */ }
   }
 
@@ -188,12 +190,22 @@ export class MembersService {
     if (tempProfileImageFile) {
       if (member.profileImageUrl) this.deleteMemberImageFile(member.profileImageUrl);
       const url = this.moveTempToMember(tempProfileImageFile);
-      if (url) (updateData as Record<string, unknown>).profileImageUrl = url;
+      if (url) {
+        (updateData as Record<string, unknown>).profileImageUrl = url;
+        const destPath = join(this.memberDir, tempProfileImageFile);
+        (updateData as Record<string, unknown>).profileThumbnailUrl =
+          await generateThumbFor(destPath, "members", this.appUrl);
+      }
     }
     if (tempBannerImageFile) {
       if (member.bannerImageUrl) this.deleteMemberImageFile(member.bannerImageUrl);
       const url = this.moveTempToMember(tempBannerImageFile);
-      if (url) (updateData as Record<string, unknown>).bannerImageUrl = url;
+      if (url) {
+        (updateData as Record<string, unknown>).bannerImageUrl = url;
+        const destPath = join(this.memberDir, tempBannerImageFile);
+        (updateData as Record<string, unknown>).bannerThumbnailUrl =
+          await generateThumbFor(destPath, "members", this.appUrl);
+      }
     }
 
     try {

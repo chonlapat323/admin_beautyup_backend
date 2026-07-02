@@ -4,6 +4,7 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { Prisma, ProductStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 type ProductListParams = {
   search?: string;
@@ -63,6 +64,7 @@ export class ProductsService {
       if (!filename) return;
       const filePath = join(this.productDir, filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("products", filename);
     } catch {
       // ignore fs errors
     }
@@ -192,8 +194,10 @@ export class ProductsService {
       let sortOrder = 0;
       for (const filename of payload.tempFiles) {
         const url = this.moveTempToProduct(filename);
-        if (!url) continue; // skip if temp file missing
-        await this.prisma.productImage.create({ data: { productId: product.id, url, sortOrder } });
+        if (!url) continue;
+        const destPath = join(this.productDir, filename);
+        const thumbnailUrl = await generateThumbFor(destPath, "products", this.appUrl);
+        await this.prisma.productImage.create({ data: { productId: product.id, url, thumbnailUrl, sortOrder } });
         sortOrder++;
       }
     }
@@ -331,8 +335,10 @@ export class ProductsService {
         sortOrder++;
       } else {
         const url = this.moveTempToProduct(item.filename);
-        if (!url) continue; // skip if temp file missing
-        await this.prisma.productImage.create({ data: { productId, url, sortOrder } });
+        if (!url) continue;
+        const destPath = join(this.productDir, item.filename);
+        const thumbnailUrl = await generateThumbFor(destPath, "products", this.appUrl);
+        await this.prisma.productImage.create({ data: { productId, url, thumbnailUrl, sortOrder } });
         sortOrder++;
       }
     }

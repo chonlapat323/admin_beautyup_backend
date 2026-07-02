@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, Logger, UnauthorizedException } from "
 import { createHash, randomBytes } from "crypto";
 import { existsSync, unlinkSync } from "fs";
 import { join } from "path";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 import { FlowAccountService } from "../flowaccount/flowaccount.service";
 import { KBankService } from "../kbank/kbank.service";
 import { OmiseService } from "../omise/omise.service";
@@ -1129,7 +1130,7 @@ export class MobileService {
       where: { memberId },
       orderBy: { createdAt: "desc" },
       include: {
-        rewardProduct: { select: { id: true, name: true, imageUrl: true } },
+        rewardProduct: { select: { id: true, name: true, imageUrl: true, thumbnailUrl: true } },
       },
     });
   }
@@ -1139,32 +1140,36 @@ export class MobileService {
     return { message: "บันทึก push token แล้ว" };
   }
 
-  async updateProfileImage(memberId: string, file: Express.Multer.File): Promise<{ profileImageUrl: string }> {
+  async updateProfileImage(memberId: string, file: Express.Multer.File): Promise<{ profileImageUrl: string; profileThumbnailUrl: string | null }> {
     const appUrl = process.env.APP_URL || `http://localhost:${process.env.PORT ?? 3000}`;
     const profileImageUrl = `${appUrl}/uploads/members/${file.filename}`;
+    const destPath = join(process.cwd(), "uploads", "members", file.filename);
 
     const member = await this.prisma.member.findUnique({
       where: { id: memberId },
       select: { profileImageUrl: true },
     });
 
-    // Delete old image file if it exists
+    // Delete old image and thumbnail files if they exist
     if (member?.profileImageUrl) {
       try {
         const oldFilename = member.profileImageUrl.split("/").pop();
         if (oldFilename) {
           const oldPath = join(process.cwd(), "uploads", "members", oldFilename);
           if (existsSync(oldPath)) unlinkSync(oldPath);
+          deleteThumbnailFor("members", oldFilename);
         }
       } catch { /* ignore */ }
     }
 
+    const profileThumbnailUrl = await generateThumbFor(destPath, "members", appUrl);
+
     await this.prisma.member.update({
       where: { id: memberId },
-      data: { profileImageUrl },
+      data: { profileImageUrl, profileThumbnailUrl },
     });
 
-    return { profileImageUrl };
+    return { profileImageUrl, profileThumbnailUrl };
   }
 
   async getFavorites(memberId: string): Promise<string[]> {
@@ -1211,7 +1216,9 @@ export class MobileService {
       bankAccountNumber: (member.bankAccountNumber as string | null) ?? null,
       bankAccountName: (member.bankAccountName as string | null) ?? null,
       profileImageUrl: (member.profileImageUrl as string | null) ?? null,
+      profileThumbnailUrl: (member.profileThumbnailUrl as string | null) ?? null,
       bannerImageUrl: (member.bannerImageUrl as string | null) ?? null,
+      bannerThumbnailUrl: (member.bannerThumbnailUrl as string | null) ?? null,
     };
   }
 }

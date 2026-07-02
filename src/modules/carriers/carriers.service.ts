@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, renameSync, unlinkSync } from "fs";
 import { join } from "path";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 @Injectable()
 export class CarriersService {
@@ -28,6 +29,7 @@ export class CarriersService {
       if (!filename) return;
       const filePath = join(process.cwd(), "uploads", "carriers", filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("carriers", filename);
     } catch { /* ignore */ }
   }
 
@@ -55,10 +57,17 @@ export class CarriersService {
     sortOrder?: number;
   }) {
     const { tempImageFile, ...rest } = data;
-    const logoUrl = tempImageFile
-      ? (this.moveTempToCarrier(tempImageFile) ?? rest.logoUrl)
-      : rest.logoUrl;
-    return this.prisma.carrier.create({ data: { ...rest, logoUrl } });
+    let logoUrl = rest.logoUrl;
+    let thumbnailUrl: string | null = null;
+    if (tempImageFile) {
+      const moved = this.moveTempToCarrier(tempImageFile);
+      if (moved) {
+        logoUrl = moved;
+        const destPath = join(process.cwd(), "uploads", "carriers", tempImageFile);
+        thumbnailUrl = await generateThumbFor(destPath, "carriers", this.appUrl);
+      }
+    }
+    return this.prisma.carrier.create({ data: { ...rest, logoUrl, thumbnailUrl } });
   }
 
   async update(
@@ -78,14 +87,20 @@ export class CarriersService {
     const carrier = await this.findOne(id);
     const { tempImageFile, ...rest } = data;
     let logoUrl = rest.logoUrl;
+    let thumbnailUrl: string | null | undefined = undefined;
     if (tempImageFile) {
       const newUrl = this.moveTempToCarrier(tempImageFile);
       if (newUrl) {
         if (carrier.logoUrl) this.deleteCarrierImageFile(carrier.logoUrl);
         logoUrl = newUrl;
+        const destPath = join(process.cwd(), "uploads", "carriers", tempImageFile);
+        thumbnailUrl = await generateThumbFor(destPath, "carriers", this.appUrl);
       }
     }
-    return this.prisma.carrier.update({ where: { id }, data: { ...rest, logoUrl } });
+    return this.prisma.carrier.update({
+      where: { id },
+      data: { ...rest, logoUrl, ...(thumbnailUrl !== undefined && { thumbnailUrl }) },
+    });
   }
 
   async remove(id: string) {

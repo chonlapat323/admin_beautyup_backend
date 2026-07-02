@@ -53,31 +53,33 @@ enum RedemptionStatus {
 }
 
 model Banner {
-  id          String   @id @default(cuid())
-  eyebrow     String
-  title       String
-  body        String?
-  tag         String?
-  buttonLabel String   @default("Shop Now")
-  imageUrl    String?
-  linkType    String   @default("none")
-  linkId      String?
-  sortOrder   Int      @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  eyebrow      String
+  title        String
+  body         String?
+  tag          String?
+  buttonLabel  String   @default("Shop Now")
+  imageUrl     String?
+  thumbnailUrl String?
+  linkType     String   @default("none")
+  linkId       String?
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Bundle {
-  id          String       @id @default(cuid())
-  name        String
-  description String?
-  imageUrl    String?
-  isActive    Boolean      @default(true)
-  sortOrder   Int          @default(0)
-  items       BundleItem[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  name         String
+  description  String?
+  imageUrl     String?
+  thumbnailUrl String?
+  isActive     Boolean      @default(true)
+  sortOrder    Int          @default(0)
+  items        BundleItem[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model BundleItem {
@@ -172,10 +174,12 @@ model Member {
   creditTransactions   CreditTransaction[]
   withdrawalRequests   WithdrawalRequest[]
   sessions             MemberSession[]
-  flowAccountContactId Int?
-  expoPushToken        String?
-  profileImageUrl      String?
-  bannerImageUrl       String?
+  flowAccountContactId   Int?
+  expoPushToken          String?
+  profileImageUrl        String?
+  profileThumbnailUrl    String?
+  bannerImageUrl         String?
+  bannerThumbnailUrl     String?
   facebook             String?
   tiktok               String?
   shopee               String?
@@ -223,6 +227,7 @@ model Category {
   eyebrow                String?
   description            String?
   imageUrl               String?
+  thumbnailUrl           String?
   requiresShadeSelection Boolean      @default(false)
   sortOrder              Int          @default(0)
   isActive               Boolean      @default(true)
@@ -256,6 +261,7 @@ model Shade {
   shadeGroup   ShadeGroup @relation(fields: [shadeGroupId], references: [id], onDelete: Cascade)
   name         String
   imageUrl     String?
+  thumbnailUrl String?
   sortOrder    Int        @default(0)
   isActive     Boolean    @default(true)
   createdAt    DateTime   @default(now())
@@ -263,30 +269,32 @@ model Shade {
 }
 
 model Carrier {
-  id          String   @id @default(cuid())
-  name        String
-  shortName   String
-  color       String   @default("#000000")
-  textColor   String   @default("#FFFFFF")
-  logoUrl     String?
-  trackingUrl String?
-  isActive    Boolean  @default(true)
-  sortOrder   Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(cuid())
+  name         String
+  shortName    String
+  color        String   @default("#000000")
+  textColor    String   @default("#FFFFFF")
+  logoUrl      String?
+  thumbnailUrl String?
+  trackingUrl  String?
+  isActive     Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Brand {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  slug        String       @unique
-  imageUrl    String?
-  isActive    Boolean      @default(true)
-  sortOrder   Int          @default(0)
-  categories  Category[]
-  products    Product[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id           String       @id @default(cuid())
+  name         String       @unique
+  slug         String       @unique
+  imageUrl     String?
+  thumbnailUrl String?
+  isActive     Boolean      @default(true)
+  sortOrder    Int          @default(0)
+  categories   Category[]
+  products     Product[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
 
 model Collection {
@@ -346,14 +354,15 @@ model StockMovement {
 }
 
 model ProductImage {
-  id        String   @id @default(cuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url       String
-  altText   String?
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  productId    String
+  product      Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url          String
+  thumbnailUrl String?
+  altText      String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Order {
@@ -458,15 +467,16 @@ model RewardProduct {
   sku               String?              @unique
   flowAccountItemId String?
   name              String
-  description String?
-  imageUrl    String?
-  pointCost   Int
-  stock       Int                  @default(0)
-  isActive    Boolean              @default(true)
-  images      RewardProductImage[]
-  redemptions RewardRedemption[]
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  description       String?
+  imageUrl          String?
+  thumbnailUrl      String?
+  pointCost         Int
+  stock             Int                  @default(0)
+  isActive          Boolean              @default(true)
+  images            RewardProductImage[]
+  redemptions       RewardRedemption[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 }
 
 model RewardProductImage {
@@ -474,6 +484,7 @@ model RewardProductImage {
   rewardProductId String
   rewardProduct   RewardProduct @relation(fields: [rewardProductId], references: [id], onDelete: Cascade)
   url             String
+  thumbnailUrl    String?
   sortOrder       Int           @default(0)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt

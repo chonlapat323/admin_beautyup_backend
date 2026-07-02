@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, unlinkSync } from "fs";
 import { join } from "path";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 @Injectable()
 export class BannersService {
@@ -26,6 +27,7 @@ export class BannersService {
       if (!filename) return;
       const filePath = join(this.bannerDir, filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("banners", filename);
     } catch {
       // ignore fs errors
     }
@@ -86,7 +88,9 @@ export class BannersService {
     this.deleteImageFile(banner.imageUrl);
     this.ensureBannerDir();
     const url = `${this.appUrl}/uploads/banners/${file.filename}`;
-    return this.prisma.banner.update({ where: { id }, data: { imageUrl: url } });
+    const destPath = join(this.bannerDir, file.filename);
+    const thumbnailUrl = await generateThumbFor(destPath, "banners", this.appUrl);
+    return this.prisma.banner.update({ where: { id }, data: { imageUrl: url, thumbnailUrl } });
   }
 
   async reorder(items: { id: string; sortOrder: number }[]) {

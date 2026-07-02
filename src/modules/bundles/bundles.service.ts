@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, unlinkSync } from "fs";
 import { join } from "path";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 const PRODUCT_SELECT = {
   id: true,
@@ -41,6 +42,7 @@ export class BundlesService {
       if (!filename) return;
       const filePath = join(this.bundleDir, filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("bundles", filename);
     } catch {
       // ignore fs errors
     }
@@ -124,7 +126,9 @@ export class BundlesService {
     this.deleteImageFile(bundle.imageUrl);
     this.ensureBundleDir();
     const url = `${this.appUrl}/uploads/bundles/${file.filename}`;
-    return this.prisma.bundle.update({ where: { id }, data: { imageUrl: url } });
+    const destPath = join(this.bundleDir, file.filename);
+    const thumbnailUrl = await generateThumbFor(destPath, "bundles", this.appUrl);
+    return this.prisma.bundle.update({ where: { id }, data: { imageUrl: url, thumbnailUrl } });
   }
 
   async reorder(items: { id: string; sortOrder: number }[]) {

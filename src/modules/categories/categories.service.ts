@@ -3,6 +3,7 @@ import { join } from "path";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 type CategoryListParams = {
   search?: string;
@@ -36,6 +37,7 @@ export class CategoriesService {
       if (!filename) return;
       const filePath = join(process.cwd(), "uploads", "categories", filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("categories", filename);
     } catch { /* ignore */ }
   }
 
@@ -101,7 +103,7 @@ export class CategoriesService {
     };
   }
 
-  create(payload: {
+  async create(payload: {
     name: string;
     slug: string;
     eyebrow?: string;
@@ -114,9 +116,16 @@ export class CategoriesService {
     isActive?: boolean;
     processedBy?: string;
   }) {
-    const imageUrl = payload.tempImageFile
-      ? (this.moveTempToCategory(payload.tempImageFile) ?? payload.imageUrl)
-      : payload.imageUrl;
+    let imageUrl = payload.imageUrl;
+    let thumbnailUrl: string | null = null;
+    if (payload.tempImageFile) {
+      const moved = this.moveTempToCategory(payload.tempImageFile);
+      if (moved) {
+        imageUrl = moved;
+        const destPath = join(process.cwd(), "uploads", "categories", payload.tempImageFile);
+        thumbnailUrl = await generateThumbFor(destPath, "categories", this.appUrl);
+      }
+    }
 
     return this.prisma.category.create({
       data: {
@@ -125,6 +134,7 @@ export class CategoriesService {
         eyebrow: payload.eyebrow,
         description: payload.description,
         imageUrl,
+        thumbnailUrl,
         brandId: payload.brandId ?? null,
         requiresShadeSelection: payload.requiresShadeSelection ?? false,
         sortOrder: payload.sortOrder ?? 0,
@@ -172,11 +182,14 @@ export class CategoriesService {
     const existing = await this.findOne(id);
 
     let imageUrl: string | undefined = undefined;
+    let thumbnailUrl: string | null | undefined = undefined;
     if (payload.tempImageFile) {
       const moved = this.moveTempToCategory(payload.tempImageFile);
       if (moved) {
         if (existing.imageUrl) this.deleteCategoryImageFile(existing.imageUrl);
         imageUrl = moved;
+        const destPath = join(process.cwd(), "uploads", "categories", payload.tempImageFile);
+        thumbnailUrl = await generateThumbFor(destPath, "categories", this.appUrl);
       }
     } else if (typeof payload.imageUrl === "string" && payload.imageUrl.length > 0) {
       imageUrl = payload.imageUrl;
@@ -190,6 +203,7 @@ export class CategoriesService {
         ...(payload.eyebrow !== undefined && { eyebrow: payload.eyebrow }),
         ...(payload.description !== undefined && { description: payload.description }),
         ...(imageUrl !== undefined && { imageUrl }),
+        ...(thumbnailUrl !== undefined && { thumbnailUrl }),
         ...("brandId" in payload && { brandId: payload.brandId ?? null }),
         ...(payload.requiresShadeSelection !== undefined && { requiresShadeSelection: payload.requiresShadeSelection }),
         ...(payload.sortOrder !== undefined && { sortOrder: payload.sortOrder }),

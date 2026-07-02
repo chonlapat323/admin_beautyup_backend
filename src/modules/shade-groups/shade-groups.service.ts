@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, unlinkSync } from "fs";
 import { join } from "path";
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
+import { generateThumbFor, deleteThumbnailFor } from "../../utils/thumbnail";
 
 @Injectable()
 export class ShadeGroupsService {
@@ -21,6 +22,7 @@ export class ShadeGroupsService {
       if (!filename) return;
       const filePath = join(this.shadeDir, filename);
       if (existsSync(filePath)) unlinkSync(filePath);
+      deleteThumbnailFor("shades", filename);
     } catch { /* ignore */ }
   }
 
@@ -89,7 +91,9 @@ export class ShadeGroupsService {
     if (shade.imageUrl) this.deleteShadeImage(shade.imageUrl);
     if (!existsSync(this.shadeDir)) mkdirSync(this.shadeDir, { recursive: true });
     const url = `${this.appUrl}/uploads/shades/${file.filename}`;
-    return this.prisma.shade.update({ where: { id: shadeId }, data: { imageUrl: url } });
+    const destPath = join(this.shadeDir, file.filename);
+    const thumbnailUrl = await generateThumbFor(destPath, "shades", this.appUrl);
+    return this.prisma.shade.update({ where: { id: shadeId }, data: { imageUrl: url, thumbnailUrl } });
   }
 
   async deleteShade(shadeId: string) {
