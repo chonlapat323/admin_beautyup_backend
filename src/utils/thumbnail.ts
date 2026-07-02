@@ -1,6 +1,5 @@
-import sharp from "sharp";
 import { existsSync, mkdirSync, unlinkSync } from "fs";
-import { dirname, join } from "path";
+import { join } from "path";
 
 const THUMB_WIDTH = 400;
 const THUMB_QUALITY = 60;
@@ -27,6 +26,8 @@ export async function generateThumbFor(
 ): Promise<string | null> {
   try {
     if (!existsSync(destFilePath)) return null;
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const sharp: (path: string) => any = require("sharp");
     const filename = destFilePath.split(/[/\\]/).pop() ?? "";
     const thumbDir = join(process.cwd(), "uploads", "thumbnails", type);
     if (!existsSync(thumbDir)) mkdirSync(thumbDir, { recursive: true });
