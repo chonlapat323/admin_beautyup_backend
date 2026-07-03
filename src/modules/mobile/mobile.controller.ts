@@ -420,6 +420,17 @@ export class MobileController {
     return this.mobileService.updateProfileImage(member.id, file);
   }
 
+  @Patch("me/social-links")
+  @ApiOperation({ summary: "Update member social links" })
+  async updateSocialLinks(
+    @Headers("authorization") auth: string,
+    @Body() body: { facebook?: string; tiktok?: string; shopee?: string; lazada?: string },
+  ) {
+    const member = await this.extractMember(auth);
+    await this.mobileService.updateSocialLinks(member.id, body);
+    return { message: "บันทึกช่องทางติดต่อแล้ว" };
+  }
+
   @Get("me/favorites")
   @ApiOperation({ summary: "Get favorite product IDs for current member" })
   async getFavorites(@Headers("authorization") auth: string) {

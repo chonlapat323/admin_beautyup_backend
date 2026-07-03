@@ -1219,6 +1219,27 @@ export class MobileService {
       profileThumbnailUrl: (member.profileThumbnailUrl as string | null) ?? null,
       bannerImageUrl: (member.bannerImageUrl as string | null) ?? null,
       bannerThumbnailUrl: (member.bannerThumbnailUrl as string | null) ?? null,
+      facebook: (member.facebook as string | null) ?? null,
+      tiktok: (member.tiktok as string | null) ?? null,
+      shopee: (member.shopee as string | null) ?? null,
+      lazada: (member.lazada as string | null) ?? null,
     };
+  }
+
+  async updateSocialLinks(memberId: string, data: {
+    facebook?: string | null;
+    tiktok?: string | null;
+    shopee?: string | null;
+    lazada?: string | null;
+  }): Promise<void> {
+    await this.prisma.member.update({
+      where: { id: memberId },
+      data: {
+        facebook: data.facebook ?? undefined,
+        tiktok: data.tiktok ?? undefined,
+        shopee: data.shopee ?? undefined,
+        lazada: data.lazada ?? undefined,
+      },
+    });
   }
 }
